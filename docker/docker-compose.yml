@@ -1,0 +1,20 @@
+services:
+  ihy:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: ihy
+    ports:
+      - "8000:8000"
+    environment:
+      # Set a strong random value, e.g. `openssl rand -hex 32`
+      IHY_SECRET_KEY: "change-me-in-production"
+    volumes:
+      - ihy-data:/data
+      # Mount your music library here. Remote sources (SMB/NFS) should be
+      # mounted on the host first, then passed through like any local path.
+      # - /path/to/your/music:/music
+    restart: unless-stopped
+
+volumes:
+  ihy-data:
