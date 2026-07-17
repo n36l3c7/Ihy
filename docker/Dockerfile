@@ -26,4 +26,5 @@ ENV IHY_STATIC_DIR=/app/static \
 VOLUME ["/data", "/music"]
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Apply database migrations, then start the API server
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]

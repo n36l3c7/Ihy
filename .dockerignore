@@ -1,0 +1,24 @@
+# VCS
+.git
+.github
+
+# Python
+**/__pycache__
+**/.venv
+**/.pytest_cache
+**/.ruff_cache
+**/*.egg-info
+
+# Node
+**/node_modules
+**/dist
+
+# App data and environment
+**/data
+**/*.db
+**/.env
+
+# Docs and local tooling
+docs
+.vscode
+.idea

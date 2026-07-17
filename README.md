@@ -103,6 +103,8 @@ docker compose up -d --build
 
 Edit `docker-compose.yml` first to mount your music folders and set `IHY_SECRET_KEY`. Remote sources (SMB/NFS) should be mounted on the host and passed to the container as regular volumes.
 
+The image serves both the API and the built frontend on port 8000 and applies database migrations automatically on startup. App state lives in the `/data` volume; music folders are mounted under `/music` (or any path you configure as a source).
+
 ## Configuration
 
 All settings can be overridden with environment variables using the `IHY_` prefix (see `backend/.env.example`):
