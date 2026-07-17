@@ -1,4 +1,6 @@
 from collections.abc import Callable, Generator
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,6 +13,7 @@ import app.models  # noqa: F401  # registers all models on Base.metadata
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import create_app
+from app.models.library import Album, Artist, Genre, Source, Track
 from app.models.user import UserRole
 from app.services import users as users_service
 
@@ -80,3 +83,56 @@ def user_headers(
 ) -> dict[str, str]:
     users_service.create(db_session, username="regular", password="user-password")
     return make_auth_headers("regular", "user-password")
+
+
+@pytest.fixture
+def seeded_library(db_session: Session, tmp_path: Path) -> SimpleNamespace:
+    """A small library: two artists, two albums, two genres, three real files."""
+    source = Source(name="lib", path=str(tmp_path))
+    alpha = Artist(name="Alpha Band")
+    beta = Artist(name="Beta Ensemble")
+    rock = Genre(name="Rock")
+    jazz = Genre(name="Jazz")
+    album_one = Album(title="First Album", artist=alpha, year=2020)
+    album_two = Album(title="Second Album", artist=beta, year=2021)
+
+    def make_track(
+        title: str, filename: str, artist: Artist, album: Album, genre: Genre, number: int
+    ) -> Track:
+        path = tmp_path / filename
+        path.write_bytes(f"audio-bytes-{title}".encode())
+        track = Track(
+            source=source,
+            file_path=str(path),
+            file_size=path.stat().st_size,
+            file_mtime=0.0,
+            format="mp3",
+            duration=100.0,
+            bitrate=320000,
+            sample_rate=44100,
+            title=title,
+            artist=artist,
+            album=album,
+            track_number=number,
+        )
+        track.genres.append(genre)
+        return track
+
+    tracks = [
+        make_track("Ocean Song", "a1.mp3", alpha, album_one, rock, 1),
+        make_track("Mountain Song", "a2.mp3", alpha, album_one, rock, 2),
+        make_track("River Jam", "b1.mp3", beta, album_two, jazz, 1),
+    ]
+    db_session.add_all(tracks)
+    db_session.commit()
+    return SimpleNamespace(
+        source=source,
+        alpha=alpha,
+        beta=beta,
+        rock=rock,
+        jazz=jazz,
+        album_one=album_one,
+        album_two=album_two,
+        tracks=tracks,
+        root=tmp_path,
+    )

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import auth, library, sources, users
+from app.api.v1 import albums, artists, auth, genres, library, sources, tracks, users
 from app.core.config import get_settings
 
 api_router = APIRouter()
@@ -9,6 +9,10 @@ api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(sources.router, prefix="/sources", tags=["sources"])
 api_router.include_router(library.router, prefix="/library", tags=["library"])
+api_router.include_router(tracks.router, prefix="/tracks", tags=["tracks"])
+api_router.include_router(artists.router, prefix="/artists", tags=["artists"])
+api_router.include_router(albums.router, prefix="/albums", tags=["albums"])
+api_router.include_router(genres.router, prefix="/genres", tags=["genres"])
 
 
 @api_router.get("/health")
