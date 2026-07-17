@@ -8,7 +8,8 @@ from pathlib import Path
 from sqlalchemy import delete, exists, select
 from sqlalchemy.orm import Session
 
-from app.models.library import Album, Artist, Genre, Source, Track, track_genres
+from app.models.library import Album, Artist, Genre, Source, Track, track_artists, track_genres
+from app.services import app_settings
 from app.services.tag_reader import SUPPORTED_EXTENSIONS, AudioFileInfo, read_audio_file
 
 logger = logging.getLogger(__name__)
@@ -98,18 +99,48 @@ def _find_cover(directory: Path) -> str | None:
     return None
 
 
-def scan_library(db: Session, read_tags: TagReader = read_audio_file) -> ScanResult:
+def split_tag_values(values: list[str], separators: list[str]) -> list[str]:
+    """Split raw tag values on every configured separator, deduplicated in order.
+
+    Example: ["ACDC/Kiss"] with separators ["/"] -> ["ACDC", "Kiss"].
+    """
+    parts = list(values)
+    for separator in separators:
+        parts = [piece for part in parts for piece in part.split(separator)]
+    result: list[str] = []
+    seen: set[str] = set()
+    for part in parts:
+        cleaned = part.strip()
+        if cleaned and cleaned.lower() not in seen:
+            seen.add(cleaned.lower())
+            result.append(cleaned)
+    return result
+
+
+def scan_library(
+    db: Session,
+    read_tags: TagReader = read_audio_file,
+    separators: list[str] | None = None,
+) -> ScanResult:
     """Scan every enabled source, then prune entities left without tracks."""
+    if separators is None:
+        separators = app_settings.get_metadata_separators(db)
     result = ScanResult()
     sources = list(db.scalars(select(Source).where(Source.enabled.is_(True))))
     for source in sources:
-        _scan_source(db, source, read_tags, result)
+        _scan_source(db, source, read_tags, result, separators)
     _prune_orphans(db)
     db.commit()
     return result
 
 
-def _scan_source(db: Session, source: Source, read_tags: TagReader, result: ScanResult) -> None:
+def _scan_source(
+    db: Session,
+    source: Source,
+    read_tags: TagReader,
+    result: ScanResult,
+    separators: list[str],
+) -> None:
     root = Path(source.path)
     if not root.is_dir():
         # An unavailable path (e.g. unmounted remote share) must not wipe
@@ -157,7 +188,7 @@ def _scan_source(db: Session, source: Source, read_tags: TagReader, result: Scan
             result.added += 1
         else:
             result.updated += 1
-        _apply_info(cache, track, info, stat, path)
+        _apply_info(cache, track, info, stat, path, separators)
 
         pending += 1
         if pending % COMMIT_BATCH_SIZE == 0:
@@ -173,7 +204,12 @@ def _scan_source(db: Session, source: Source, read_tags: TagReader, result: Scan
 
 
 def _apply_info(
-    cache: _EntityCache, track: Track, info: AudioFileInfo, stat: os.stat_result, path: Path
+    cache: _EntityCache,
+    track: Track,
+    info: AudioFileInfo,
+    stat: os.stat_result,
+    path: Path,
+    separators: list[str],
 ) -> None:
     # Scalar fields first: entity lookups below may flush the session,
     # and a new track must already satisfy its NOT NULL constraints.
@@ -189,12 +225,19 @@ def _apply_info(
     track.year = info.year
     track.has_embedded_cover = info.has_embedded_cover
 
-    artist = cache.artist(info.artist)
-    album_artist = cache.artist(info.album_artist) or artist
-    track.artist = artist
+    artist_names = split_tag_values(info.artists, separators)
+    artists = [a for a in (cache.artist(name) for name in artist_names) if a is not None]
+    album_artist_names = split_tag_values(info.album_artists, separators)
+    album_artist = (
+        cache.artist(album_artist_names[0])
+        if album_artist_names
+        else (artists[0] if artists else None)
+    )
+    track.artists = artists
     track.album = cache.album(info.album, album_artist, info.year, path.parent)
+    genre_names = split_tag_values(info.genres, separators)
     track.genres = [
-        genre for genre in (cache.genre(name) for name in info.genres) if genre is not None
+        genre for genre in (cache.genre(name) for name in genre_names) if genre is not None
     ]
 
 
@@ -203,7 +246,7 @@ def _prune_orphans(db: Session) -> None:
     db.execute(delete(Album).where(~exists().where(Track.album_id == Album.id)))
     db.execute(
         delete(Artist).where(
-            ~exists().where(Track.artist_id == Artist.id),
+            ~exists().where(track_artists.c.artist_id == Artist.id),
             ~exists().where(Album.artist_id == Artist.id),
         )
     )

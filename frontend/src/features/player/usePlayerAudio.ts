@@ -95,7 +95,7 @@ export function usePlayerAudio() {
     if (currentTrack) {
       session.metadata = new MediaMetadata({
         title: currentTrack.title,
-        artist: currentTrack.artist?.name ?? "",
+        artist: currentTrack.artists.map((artist) => artist.name).join(", "),
         album: currentTrack.album?.title ?? "",
         artwork: currentTrack.album ? [{ src: coverUrl(currentTrack.album.id) }] : [],
       });

@@ -6,6 +6,7 @@ import { getArtist, getTracks } from "../../api/catalog";
 import { CoverImage } from "../../components/CoverImage";
 import { PageSpinner } from "../../components/Spinner";
 import { usePlayerStore } from "../../stores/playerStore";
+import { TrackList } from "./TrackList";
 
 export function ArtistDetailPage() {
   const { artistId } = useParams();
@@ -14,6 +15,11 @@ export function ArtistDetailPage() {
   const query = useQuery({
     queryKey: ["artist", artistId],
     queryFn: () => getArtist(Number(artistId)),
+  });
+
+  const tracksQuery = useQuery({
+    queryKey: ["artist-tracks", artistId],
+    queryFn: () => getTracks({ artist_id: Number(artistId), limit: 100 }),
   });
 
   const handlePlayAll = async () => {
@@ -49,6 +55,13 @@ export function ArtistDetailPage() {
           Play all
         </button>
       </div>
+
+      {tracksQuery.data && tracksQuery.data.items.length > 0 && (
+        <div className="mb-10">
+          <h2 className="mb-4 text-lg font-semibold">Tracks</h2>
+          <TrackList tracks={tracksQuery.data.items} />
+        </div>
+      )}
 
       <h2 className="mb-4 text-lg font-semibold">Albums</h2>
       {artist.albums.length === 0 ? (

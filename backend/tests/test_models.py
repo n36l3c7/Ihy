@@ -35,7 +35,7 @@ def test_track_with_full_relations(db_session: Session) -> None:
     album = Album(title="OK Computer", artist=artist, year=1997)
     genre = Genre(name="Alternative Rock")
     track = make_track(source, "/music/ok/karma_police.mp3", "Karma Police")
-    track.artist = artist
+    track.artists.append(artist)
     track.album = album
     track.genres.append(genre)
 
@@ -44,7 +44,7 @@ def test_track_with_full_relations(db_session: Session) -> None:
 
     saved = db_session.get(Track, track.id)
     assert saved is not None
-    assert saved.artist.name == "Radiohead"
+    assert [a.name for a in saved.artists] == ["Radiohead"]
     assert saved.album.title == "OK Computer"
     assert saved.album.artist is artist
     assert [g.name for g in saved.genres] == ["Alternative Rock"]

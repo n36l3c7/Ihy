@@ -38,7 +38,7 @@ class TrackRead(BaseModel):
     track_number: int | None
     disc_number: int | None
     year: int | None
-    artist: ArtistBrief | None
+    artists: list[ArtistBrief]
     album: AlbumBrief | None
     genres: list[GenreRead]
 

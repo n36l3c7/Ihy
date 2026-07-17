@@ -2,13 +2,23 @@
 which Alembic autogenerate and Base.metadata.create_all rely on."""
 
 from app.db.base import Base
+from app.models.app_setting import AppSetting
 from app.models.interactions import Favorite, PlayHistory
-from app.models.library import Album, Artist, Genre, Source, Track, track_genres
+from app.models.library import (
+    Album,
+    Artist,
+    Genre,
+    Source,
+    Track,
+    track_artists,
+    track_genres,
+)
 from app.models.playlist import Playlist, PlaylistItem
 from app.models.user import User, UserRole
 
 __all__ = [
     "Album",
+    "AppSetting",
     "Artist",
     "Base",
     "Favorite",
@@ -20,5 +30,6 @@ __all__ = [
     "Track",
     "User",
     "UserRole",
+    "track_artists",
     "track_genres",
 ]

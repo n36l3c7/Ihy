@@ -9,6 +9,7 @@ from app.api.v1 import (
     history,
     library,
     playlists,
+    settings,
     sources,
     tracks,
     users,
@@ -28,6 +29,7 @@ api_router.include_router(genres.router, prefix="/genres", tags=["genres"])
 api_router.include_router(favorites.router, prefix="/favorites", tags=["favorites"])
 api_router.include_router(playlists.router, prefix="/playlists", tags=["playlists"])
 api_router.include_router(history.router, prefix="/history", tags=["history"])
+api_router.include_router(settings.router, prefix="/settings", tags=["settings"])
 
 
 @api_router.get("/health")

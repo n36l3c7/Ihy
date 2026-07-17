@@ -20,7 +20,10 @@ export function SettingsLayout() {
         <NavLink to="/settings/sources" className={tabClass}>
           Sources
         </NavLink>
-        {/* Future tabs: Library (metadata separators), Users */}
+        <NavLink to="/settings/library" className={tabClass}>
+          Library
+        </NavLink>
+        {/* Future tabs: Users */}
       </nav>
       <Outlet />
     </div>

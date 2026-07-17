@@ -43,16 +43,21 @@ export function PlayerBar() {
           <CoverImage albumId={track.album?.id} className="h-12 w-12 shrink-0 rounded" />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-zinc-100">{track.title}</p>
-            {track.artist ? (
-              <Link
-                to={`/artists/${track.artist.id}`}
-                className="block truncate text-xs text-zinc-400 hover:text-zinc-100 hover:underline"
-              >
-                {track.artist.name}
-              </Link>
-            ) : (
-              <p className="truncate text-xs text-zinc-400">Unknown artist</p>
-            )}
+            <p className="truncate text-xs text-zinc-400">
+              {track.artists.length > 0
+                ? track.artists.map((artist, index) => (
+                    <span key={artist.id}>
+                      {index > 0 && ", "}
+                      <Link
+                        to={`/artists/${artist.id}`}
+                        className="hover:text-zinc-100 hover:underline"
+                      >
+                        {artist.name}
+                      </Link>
+                    </span>
+                  ))
+                : "Unknown artist"}
+            </p>
           </div>
           <FavoriteButton trackId={track.id} />
         </div>

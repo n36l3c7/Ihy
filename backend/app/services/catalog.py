@@ -3,7 +3,7 @@ from typing import Literal
 from sqlalchemy import Select, distinct, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models.library import Album, Artist, Genre, Track, track_genres
+from app.models.library import Album, Artist, Genre, Track, track_artists, track_genres
 
 TrackSort = Literal["title", "recent"]
 
@@ -17,19 +17,15 @@ def _apply_track_filters(
 ) -> Select:
     if q:
         pattern = f"%{q}%"
-        stmt = (
-            stmt.outerjoin(Artist, Track.artist_id == Artist.id)
-            .outerjoin(Album, Track.album_id == Album.id)
-            .where(
-                or_(
-                    Track.title.ilike(pattern),
-                    Artist.name.ilike(pattern),
-                    Album.title.ilike(pattern),
-                )
+        stmt = stmt.outerjoin(Album, Track.album_id == Album.id).where(
+            or_(
+                Track.title.ilike(pattern),
+                Track.artists.any(Artist.name.ilike(pattern)),
+                Album.title.ilike(pattern),
             )
         )
     if artist_id is not None:
-        stmt = stmt.where(Track.artist_id == artist_id)
+        stmt = stmt.where(Track.artists.any(Artist.id == artist_id))
     if album_id is not None:
         stmt = stmt.where(Track.album_id == album_id)
     if genre_id is not None:
@@ -53,7 +49,7 @@ def list_tracks(
     order = Track.created_at.desc() if sort == "recent" else Track.title
     stmt = (
         base.options(
-            selectinload(Track.artist),
+            selectinload(Track.artists),
             selectinload(Track.album),
             selectinload(Track.genres),
         )
@@ -69,7 +65,7 @@ def get_track(db: Session, track_id: int) -> Track | None:
         select(Track)
         .where(Track.id == track_id)
         .options(
-            selectinload(Track.artist),
+            selectinload(Track.artists),
             selectinload(Track.album),
             selectinload(Track.genres),
         )
@@ -86,9 +82,13 @@ def list_artists(
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
 
     stmt = (
-        select(Artist, func.count(distinct(Album.id)), func.count(distinct(Track.id)))
+        select(
+            Artist,
+            func.count(distinct(Album.id)),
+            func.count(distinct(track_artists.c.track_id)),
+        )
         .outerjoin(Album, Album.artist_id == Artist.id)
-        .outerjoin(Track, Track.artist_id == Artist.id)
+        .outerjoin(track_artists, track_artists.c.artist_id == Artist.id)
         .group_by(Artist.id)
         .order_by(Artist.name)
         .limit(limit)
@@ -145,7 +145,7 @@ def get_album(db: Session, album_id: int) -> Album | None:
         .options(
             selectinload(Album.artist),
             selectinload(Album.tracks).options(
-                selectinload(Track.artist),
+                selectinload(Track.artists),
                 selectinload(Track.album),
                 selectinload(Track.genres),
             ),

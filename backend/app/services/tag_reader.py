@@ -19,9 +19,11 @@ class AudioFileInfo:
     bitrate: int | None
     sample_rate: int | None
     title: str | None
-    artist: str | None
     album: str | None
-    album_artist: str | None
+    # Raw tag values; multi-value splitting on configured separators
+    # happens later, in the scanner.
+    artists: list[str] = field(default_factory=list)
+    album_artists: list[str] = field(default_factory=list)
     genres: list[str] = field(default_factory=list)
     year: int | None = None
     track_number: int | None = None
@@ -35,6 +37,11 @@ def _first(audio: mutagen.FileType, key: str) -> str | None:
         return None
     value = str(values[0]).strip()
     return value or None
+
+
+def _all(audio: mutagen.FileType, key: str) -> list[str]:
+    values = audio.get(key) or []
+    return [str(value).strip() for value in values if str(value).strip()]
 
 
 def _parse_year(raw: str | None) -> int | None:
@@ -88,10 +95,10 @@ def read_audio_file(path: Path) -> AudioFileInfo | None:
         bitrate=getattr(audio.info, "bitrate", None) or None,
         sample_rate=getattr(audio.info, "sample_rate", None) or None,
         title=_first(audio, "title"),
-        artist=_first(audio, "artist"),
         album=_first(audio, "album"),
-        album_artist=_first(audio, "albumartist"),
-        genres=[str(g).strip() for g in (audio.get("genre") or []) if str(g).strip()],
+        artists=_all(audio, "artist"),
+        album_artists=_all(audio, "albumartist"),
+        genres=_all(audio, "genre"),
         year=_parse_year(_first(audio, "date")),
         track_number=_parse_number(_first(audio, "tracknumber")),
         disc_number=_parse_number(_first(audio, "discnumber")),

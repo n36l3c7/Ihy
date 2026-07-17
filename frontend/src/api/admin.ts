@@ -1,5 +1,5 @@
 import { api } from "./http";
-import type { ScanStatus, Source } from "./types";
+import type { LibrarySettings, ScanStatus, Source } from "./types";
 
 export const getSources = () => api<Source[]>("/sources");
 
@@ -11,3 +11,11 @@ export const deleteSource = (id: number) => api<void>(`/sources/${id}`, { method
 export const getScanStatus = () => api<ScanStatus>("/library/scan");
 
 export const startScan = () => api<ScanStatus>("/library/scan", { method: "POST" });
+
+export const getLibrarySettings = () => api<LibrarySettings>("/settings/library");
+
+export const updateLibrarySettings = (settings: LibrarySettings) =>
+  api<LibrarySettings>("/settings/library", {
+    method: "PUT",
+    body: JSON.stringify(settings),
+  });

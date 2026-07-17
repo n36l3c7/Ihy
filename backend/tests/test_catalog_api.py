@@ -55,7 +55,7 @@ def test_track_detail_includes_relations(
     track = seeded_library.tracks[0]
     body = client.get(f"{TRACKS_URL}/{track.id}", headers=user_headers).json()
     assert body["title"] == "Ocean Song"
-    assert body["artist"]["name"] == "Alpha Band"
+    assert [a["name"] for a in body["artists"]] == ["Alpha Band"]
     assert body["album"]["title"] == "First Album"
     assert [g["name"] for g in body["genres"]] == ["Rock"]
 

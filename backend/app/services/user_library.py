@@ -9,7 +9,7 @@ from app.models.playlist import Playlist, PlaylistItem
 from app.models.user import User
 
 _TRACK_RELATIONS = (
-    selectinload(Track.artist),
+    selectinload(Track.artists),
     selectinload(Track.album),
     selectinload(Track.genres),
 )

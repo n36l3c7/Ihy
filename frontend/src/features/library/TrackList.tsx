@@ -5,7 +5,7 @@ import { Link } from "react-router";
 import type { Track } from "../../api/types";
 import { CoverImage } from "../../components/CoverImage";
 import { FavoriteButton } from "../../components/FavoriteButton";
-import { formatDuration } from "../../lib/format";
+import { artistNames, formatDuration } from "../../lib/format";
 import { selectCurrentTrack, usePlayerStore } from "../../stores/playerStore";
 import { AddToPlaylistMenu } from "../playlists/AddToPlaylistMenu";
 
@@ -75,7 +75,7 @@ export function TrackList({
                   {track.title}
                 </span>
                 <span className="block truncate text-xs text-zinc-400">
-                  {track.artist?.name ?? "Unknown artist"}
+                  {artistNames(track.artists)}
                 </span>
               </span>
               {showAlbum && (

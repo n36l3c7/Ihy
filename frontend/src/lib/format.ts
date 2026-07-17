@@ -5,6 +5,10 @@ export function formatDuration(totalSeconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+export function artistNames(artists: { name: string }[]): string {
+  return artists.length > 0 ? artists.map((artist) => artist.name).join(", ") : "Unknown artist";
+}
+
 export function formatTotalDuration(totalSeconds: number): string {
   const minutes = Math.round(totalSeconds / 60);
   if (minutes < 60) return `${minutes} min`;

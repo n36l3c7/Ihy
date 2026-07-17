@@ -111,7 +111,7 @@ def seeded_library(db_session: Session, tmp_path: Path) -> SimpleNamespace:
             bitrate=320000,
             sample_rate=44100,
             title=title,
-            artist=artist,
+            artists=[artist],
             album=album,
             track_number=number,
         )

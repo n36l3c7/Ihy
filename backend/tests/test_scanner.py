@@ -47,13 +47,13 @@ def test_title_falls_back_to_filename(
 ) -> None:
     reader = FakeReader()
     path = write_audio_file(tmp_path, "untitled_song.mp3")
-    reader.add(path, make_info(title=None, artist=None, album=None, genres=[]))
+    reader.add(path, make_info(title=None, artists=[], album=None, genres=[]))
 
     scan_library(db_session, reader)
 
     track = db_session.scalar(select(Track))
     assert track.title == "untitled_song"
-    assert track.artist is None
+    assert track.artists == []
     assert track.album is None
 
 
@@ -124,6 +124,51 @@ def test_deleted_file_removed_and_orphans_pruned(
     assert db_session.query(Album).count() == 0
     assert db_session.query(Artist).count() == 0
     assert db_session.query(Genre).count() == 0
+
+
+def test_multi_artist_tag_split_on_separator(
+    tmp_path: Path, db_session: Session, source: Source
+) -> None:
+    reader = FakeReader()
+    path = write_audio_file(tmp_path, "duet.mp3")
+    reader.add(path, make_info(title="Duet", artists=["ACDC/Kiss"]))
+
+    scan_library(db_session, reader)  # default separators include "/"
+
+    track = db_session.scalar(select(Track))
+    assert sorted(a.name for a in track.artists) == ["ACDC", "Kiss"]
+    for name in ("ACDC", "Kiss"):
+        artist = db_session.scalar(select(Artist).where(Artist.name == name))
+        assert artist is not None
+        assert [t.title for t in artist.tracks] == ["Duet"]
+
+
+def test_custom_separators_respected(
+    tmp_path: Path, db_session: Session, source: Source
+) -> None:
+    reader = FakeReader()
+    path = write_audio_file(tmp_path, "singleartist.mp3")
+    reader.add(path, make_info(title="Single", artists=["AC/DC"], genres=["Rock; Pop"]))
+
+    # With only ";" configured, "AC/DC" must remain a single artist
+    scan_library(db_session, reader, separators=[";"])
+
+    track = db_session.scalar(select(Track))
+    assert [a.name for a in track.artists] == ["AC/DC"]
+    assert sorted(g.name for g in track.genres) == ["Pop", "Rock"]
+
+
+def test_genre_tag_split_on_separator(
+    tmp_path: Path, db_session: Session, source: Source
+) -> None:
+    reader = FakeReader()
+    path = write_audio_file(tmp_path, "mixed.mp3")
+    reader.add(path, make_info(genres=["Rock/Pop"]))
+
+    scan_library(db_session, reader)
+
+    track = db_session.scalar(select(Track))
+    assert sorted(g.name for g in track.genres) == ["Pop", "Rock"]
 
 
 def test_unreadable_file_counts_as_error(

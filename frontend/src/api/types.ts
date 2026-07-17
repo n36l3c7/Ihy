@@ -50,7 +50,7 @@ export interface Track {
   track_number: number | null;
   disc_number: number | null;
   year: number | null;
-  artist: ArtistBrief | null;
+  artists: ArtistBrief[];
   album: AlbumBrief | null;
   genres: Genre[];
 }
@@ -120,6 +120,10 @@ export interface ScanResult {
   removed: number;
   unchanged: number;
   errors: number;
+}
+
+export interface LibrarySettings {
+  metadata_separators: string[];
 }
 
 export interface ScanStatus {

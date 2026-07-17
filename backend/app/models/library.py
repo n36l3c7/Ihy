@@ -19,6 +19,14 @@ track_genres = Table(
     Column("genre_id", ForeignKey("genres.id", ondelete="CASCADE"), primary_key=True),
 )
 
+# A track can credit multiple artists (split from tags via configurable separators)
+track_artists = Table(
+    "track_artists",
+    Base.metadata,
+    Column("track_id", ForeignKey("tracks.id", ondelete="CASCADE"), primary_key=True),
+    Column("artist_id", ForeignKey("artists.id", ondelete="CASCADE"), primary_key=True),
+)
+
 
 class Source(TimestampMixin, Base):
     """A configured media folder (local path or host-mounted remote storage)."""
@@ -44,7 +52,7 @@ class Artist(TimestampMixin, Base):
     sort_name: Mapped[str | None] = mapped_column(String(255))
 
     albums: Mapped[list["Album"]] = relationship(back_populates="artist")
-    tracks: Mapped[list["Track"]] = relationship(back_populates="artist")
+    tracks: Mapped[list["Track"]] = relationship(secondary=track_artists, back_populates="artists")
 
 
 class Album(TimestampMixin, Base):
@@ -93,9 +101,6 @@ class Track(TimestampMixin, Base):
 
     # Tag information
     title: Mapped[str] = mapped_column(String(255), index=True)
-    artist_id: Mapped[int | None] = mapped_column(
-        ForeignKey("artists.id", ondelete="SET NULL"), index=True
-    )
     album_id: Mapped[int | None] = mapped_column(
         ForeignKey("albums.id", ondelete="SET NULL"), index=True
     )
@@ -105,6 +110,8 @@ class Track(TimestampMixin, Base):
     has_embedded_cover: Mapped[bool] = mapped_column(default=False)
 
     source: Mapped["Source"] = relationship(back_populates="tracks")
-    artist: Mapped["Artist | None"] = relationship(back_populates="tracks")
+    artists: Mapped[list["Artist"]] = relationship(
+        secondary=track_artists, back_populates="tracks"
+    )
     album: Mapped["Album | None"] = relationship(back_populates="tracks")
     genres: Mapped[list["Genre"]] = relationship(secondary=track_genres, back_populates="tracks")
