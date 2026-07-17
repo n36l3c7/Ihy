@@ -1,16 +1,21 @@
 import { Play, Volume2 } from "lucide-react";
+import type { ReactNode } from "react";
 import { Link } from "react-router";
 
 import type { Track } from "../../api/types";
 import { CoverImage } from "../../components/CoverImage";
+import { FavoriteButton } from "../../components/FavoriteButton";
 import { formatDuration } from "../../lib/format";
 import { selectCurrentTrack, usePlayerStore } from "../../stores/playerStore";
+import { AddToPlaylistMenu } from "../playlists/AddToPlaylistMenu";
 
 interface TrackListProps {
   tracks: Track[];
   showAlbum?: boolean;
   showCover?: boolean;
   showNumbers?: boolean;
+  /** Extra per-row action rendered before the duration (e.g. remove-from-playlist). */
+  trailing?: (track: Track, index: number) => ReactNode;
 }
 
 export function TrackList({
@@ -18,6 +23,7 @@ export function TrackList({
   showAlbum = true,
   showCover = true,
   showNumbers = false,
+  trailing,
 }: TrackListProps) {
   const currentTrack = usePlayerStore(selectCurrentTrack);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
@@ -32,11 +38,18 @@ export function TrackList({
       {tracks.map((track, index) => {
         const isCurrent = currentTrack?.id === track.id;
         return (
-          <li key={track.id}>
-            <button
-              type="button"
+          <li key={`${track.id}-${index}`}>
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => playQueue(tracks, index)}
-              className="group flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-zinc-800/60"
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  playQueue(tracks, index);
+                }
+              }}
+              className="group flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-zinc-800/60"
             >
               <span className="w-6 shrink-0 text-center text-sm text-zinc-500">
                 {isCurrent && isPlaying ? (
@@ -78,10 +91,15 @@ export function TrackList({
                   ) : null}
                 </span>
               )}
+              <span className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                <FavoriteButton trackId={track.id} />
+                <AddToPlaylistMenu trackId={track.id} />
+                {trailing?.(track, index)}
+              </span>
               <span className="shrink-0 text-xs tabular-nums text-zinc-400">
                 {formatDuration(track.duration)}
               </span>
-            </button>
+            </div>
           </li>
         );
       })}

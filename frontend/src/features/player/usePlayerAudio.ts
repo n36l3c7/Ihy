@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import type { Track } from "../../api/types";
+import { recordPlay } from "../../api/userLibrary";
 import { useAuthStore } from "../../stores/authStore";
 import { selectCurrentTrack, usePlayerStore } from "../../stores/playerStore";
 
@@ -22,6 +24,14 @@ export function usePlayerAudio() {
   const volume = usePlayerStore((state) => state.volume);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const lastRecordedRef = useRef<Track | null>(null);
+
+  // Record listening history once per playback start
+  useEffect(() => {
+    if (!currentTrack || lastRecordedRef.current === currentTrack) return;
+    lastRecordedRef.current = currentTrack;
+    void recordPlay(currentTrack.id).catch(() => {});
+  }, [currentTrack]);
 
   // Switch source when the current track changes
   useEffect(() => {

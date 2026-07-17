@@ -57,7 +57,6 @@ export function SourcesPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold">Media sources</h1>
 
       <form onSubmit={handleAdd} className="mb-8 rounded-lg border border-zinc-800 p-4">
         <p className="mb-3 text-sm font-medium text-zinc-300">Add a source folder</p>

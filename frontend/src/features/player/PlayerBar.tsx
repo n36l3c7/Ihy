@@ -11,6 +11,7 @@ import {
 import { Link } from "react-router";
 
 import { CoverImage } from "../../components/CoverImage";
+import { FavoriteButton } from "../../components/FavoriteButton";
 import { formatDuration } from "../../lib/format";
 import { selectCurrentTrack, usePlayerStore } from "../../stores/playerStore";
 import { usePlayerAudio } from "./usePlayerAudio";
@@ -53,6 +54,7 @@ export function PlayerBar() {
               <p className="truncate text-xs text-zinc-400">Unknown artist</p>
             )}
           </div>
+          <FavoriteButton trackId={track.id} />
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col items-center gap-1">

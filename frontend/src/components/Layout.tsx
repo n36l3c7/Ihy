@@ -1,24 +1,54 @@
-import { Disc3, FolderCog, ListMusic, LogOut, Mic2, Music2, Tags } from "lucide-react";
-import { NavLink, Outlet } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Disc3,
+  Heart,
+  History,
+  ListMusic,
+  LogOut,
+  Mic2,
+  Music2,
+  Plus,
+  Settings,
+  Tags,
+} from "lucide-react";
+import { NavLink, Outlet, useNavigate } from "react-router";
 
+import { createPlaylist, getPlaylists } from "../api/userLibrary";
 import { PlayerBar } from "../features/player/PlayerBar";
 import { useAuthStore } from "../stores/authStore";
 
-const NAV_ITEMS = [
+const LIBRARY_ITEMS = [
   { to: "/tracks", label: "Tracks", icon: Music2 },
   { to: "/artists", label: "Artists", icon: Mic2 },
   { to: "/albums", label: "Albums", icon: Disc3 },
   { to: "/genres", label: "Genres", icon: Tags },
 ];
 
+const PERSONAL_ITEMS = [
+  { to: "/favorites", label: "Liked songs", icon: Heart },
+  { to: "/history", label: "Recently played", icon: History },
+];
+
+const linkClass = ({ isActive }: { isActive: boolean }) =>
+  `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+    isActive ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-100"
+  }`;
+
 export function Layout() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-      isActive ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-100"
-    }`;
+  const playlists = useQuery({ queryKey: ["playlists"], queryFn: getPlaylists });
+
+  const createMutation = useMutation({
+    mutationFn: () => createPlaylist("New playlist"),
+    onSuccess: (playlist) => {
+      void queryClient.invalidateQueries({ queryKey: ["playlists"] });
+      navigate(`/playlists/${playlist.id}`);
+    },
+  });
 
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
@@ -28,23 +58,47 @@ export function Layout() {
             <ListMusic className="h-6 w-6 text-emerald-500" />
             <span className="text-xl font-bold tracking-tight">Ihy</span>
           </div>
-          <nav className="flex flex-col gap-1">
-            {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+          <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+            {LIBRARY_ITEMS.map(({ to, label, icon: Icon }) => (
               <NavLink key={to} to={to} className={linkClass}>
                 <Icon className="h-4 w-4" />
                 {label}
               </NavLink>
             ))}
+            <p className="mb-1 mt-5 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              Your library
+            </p>
+            {PERSONAL_ITEMS.map(({ to, label, icon: Icon }) => (
+              <NavLink key={to} to={to} className={linkClass}>
+                <Icon className="h-4 w-4" />
+                {label}
+              </NavLink>
+            ))}
+            <div className="mb-1 mt-5 flex items-center justify-between px-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Playlists
+              </p>
+              <button
+                type="button"
+                onClick={() => createMutation.mutate()}
+                disabled={createMutation.isPending}
+                className="rounded-full p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                aria-label="Create playlist"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            {playlists.data?.map((playlist) => (
+              <NavLink key={playlist.id} to={`/playlists/${playlist.id}`} className={linkClass}>
+                <ListMusic className="h-4 w-4 shrink-0" />
+                <span className="truncate">{playlist.name}</span>
+              </NavLink>
+            ))}
             {user?.role === "admin" && (
-              <>
-                <p className="mb-1 mt-6 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Admin
-                </p>
-                <NavLink to="/settings/sources" className={linkClass}>
-                  <FolderCog className="h-4 w-4" />
-                  Sources
-                </NavLink>
-              </>
+              <NavLink to="/settings" className={`${linkClass({ isActive: false })} mt-5`}>
+                <Settings className="h-4 w-4" />
+                Settings
+              </NavLink>
             )}
           </nav>
           <div className="mt-auto flex items-center justify-between px-3 pt-4">

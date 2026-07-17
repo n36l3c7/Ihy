@@ -78,6 +78,32 @@ export interface AlbumDetail extends Album {
   tracks: Track[];
 }
 
+export interface Playlist {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  track_count: number;
+}
+
+export interface PlaylistItem {
+  id: number;
+  position: number;
+  added_at: string;
+  track: Track;
+}
+
+export interface PlaylistDetail extends Playlist {
+  items: PlaylistItem[];
+}
+
+export interface PlayHistoryEntry {
+  id: number;
+  played_at: string;
+  track: Track;
+}
+
 export interface Source {
   id: number;
   name: string;
