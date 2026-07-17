@@ -1,4 +1,5 @@
-import pytest
+from collections.abc import Callable
+
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -6,28 +7,6 @@ from app.models.user import UserRole
 from app.services import users as users_service
 
 USERS_URL = "/api/v1/users"
-
-
-def auth_headers(client: TestClient, username: str, password: str) -> dict[str, str]:
-    response = client.post(
-        "/api/v1/auth/login", data={"username": username, "password": password}
-    )
-    assert response.status_code == 200
-    return {"Authorization": f"Bearer {response.json()['access_token']}"}
-
-
-@pytest.fixture
-def admin_headers(client: TestClient, db_session: Session) -> dict[str, str]:
-    users_service.create(
-        db_session, username="admin", password="admin-password", role=UserRole.ADMIN
-    )
-    return auth_headers(client, "admin", "admin-password")
-
-
-@pytest.fixture
-def user_headers(client: TestClient, db_session: Session) -> dict[str, str]:
-    users_service.create(db_session, username="regular", password="user-password")
-    return auth_headers(client, "regular", "user-password")
 
 
 def test_list_users_requires_admin(client: TestClient, user_headers: dict[str, str]) -> None:
@@ -85,7 +64,10 @@ def test_admin_updates_user(
 
 
 def test_update_password_allows_new_login(
-    client: TestClient, admin_headers: dict[str, str], db_session: Session
+    client: TestClient,
+    admin_headers: dict[str, str],
+    db_session: Session,
+    make_auth_headers: Callable[[str, str], dict[str, str]],
 ) -> None:
     target = users_service.create(db_session, username="target", password="old-password")
 
@@ -93,7 +75,7 @@ def test_update_password_allows_new_login(
         f"{USERS_URL}/{target.id}", json={"password": "brand-new-password"}, headers=admin_headers
     )
     assert response.status_code == 200
-    assert auth_headers(client, "target", "brand-new-password")
+    assert make_auth_headers("target", "brand-new-password")
 
 
 def test_cannot_demote_last_admin(client: TestClient, admin_headers: dict[str, str]) -> None:
