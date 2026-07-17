@@ -43,7 +43,7 @@ export function SourcesPage() {
   });
 
   const scanMutation = useMutation({
-    mutationFn: startScan,
+    mutationFn: () => startScan(),
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["scan-status"] }),
   });
 

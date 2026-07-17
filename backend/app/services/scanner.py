@@ -121,14 +121,19 @@ def scan_library(
     db: Session,
     read_tags: TagReader = read_audio_file,
     separators: list[str] | None = None,
+    full: bool = False,
 ) -> ScanResult:
-    """Scan every enabled source, then prune entities left without tracks."""
+    """Scan every enabled source, then prune entities left without tracks.
+
+    With full=True, unchanged files are re-read too — required after
+    changing metadata separators, which alter how existing tags are split.
+    """
     if separators is None:
         separators = app_settings.get_metadata_separators(db)
     result = ScanResult()
     sources = list(db.scalars(select(Source).where(Source.enabled.is_(True))))
     for source in sources:
-        _scan_source(db, source, read_tags, result, separators)
+        _scan_source(db, source, read_tags, result, separators, full)
     _prune_orphans(db)
     db.commit()
     return result
@@ -140,6 +145,7 @@ def _scan_source(
     read_tags: TagReader,
     result: ScanResult,
     separators: list[str],
+    full: bool,
 ) -> None:
     root = Path(source.path)
     if not root.is_dir():
@@ -169,7 +175,8 @@ def _scan_source(
 
         track = existing.get(file_path)
         if (
-            track is not None
+            not full
+            and track is not None
             and track.file_mtime == stat.st_mtime
             and track.file_size == stat.st_size
         ):

@@ -10,7 +10,8 @@ export const deleteSource = (id: number) => api<void>(`/sources/${id}`, { method
 
 export const getScanStatus = () => api<ScanStatus>("/library/scan");
 
-export const startScan = () => api<ScanStatus>("/library/scan", { method: "POST" });
+export const startScan = (full = false) =>
+  api<ScanStatus>(`/library/scan${full ? "?full=true" : ""}`, { method: "POST" });
 
 export const getLibrarySettings = () => api<LibrarySettings>("/settings/library");
 

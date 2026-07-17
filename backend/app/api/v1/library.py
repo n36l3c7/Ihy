@@ -26,8 +26,10 @@ def scan_status(_admin: AdminUserDep) -> ScanStatusRead:
 
 
 @router.post("/scan", response_model=ScanStatusRead, status_code=status.HTTP_202_ACCEPTED)
-def start_scan(_admin: AdminUserDep) -> ScanStatusRead:
-    if not scan_manager.start():
+def start_scan(_admin: AdminUserDep, full: bool = False) -> ScanStatusRead:
+    """Start a scan. With full=true, unchanged files are re-read too
+    (needed after changing metadata separators)."""
+    if not scan_manager.start(full=full):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="A scan is already running"
         )

@@ -158,6 +158,30 @@ def test_custom_separators_respected(
     assert sorted(g.name for g in track.genres) == ["Pop", "Rock"]
 
 
+def test_full_scan_resplits_unchanged_files(
+    tmp_path: Path, db_session: Session, source: Source
+) -> None:
+    reader = FakeReader()
+    path = write_audio_file(tmp_path, "duo.mp3")
+    reader.add(path, make_info(title="Duo", artists=["ACDC/Kiss"]))
+    scan_library(db_session, reader, separators=[";"])
+    track = db_session.scalar(select(Track))
+    assert [a.name for a in track.artists] == ["ACDC/Kiss"]
+
+    # A normal rescan skips the unchanged file: old split remains
+    scan_library(db_session, reader, separators=["/"])
+    db_session.expire_all()
+    track = db_session.scalar(select(Track))
+    assert [a.name for a in track.artists] == ["ACDC/Kiss"]
+
+    # A full rescan re-reads it and applies the new separators
+    result = scan_library(db_session, reader, separators=["/"], full=True)
+    assert result.updated == 1
+    db_session.expire_all()
+    track = db_session.scalar(select(Track))
+    assert sorted(a.name for a in track.artists) == ["ACDC", "Kiss"]
+
+
 def test_genre_tag_split_on_separator(
     tmp_path: Path, db_session: Session, source: Source
 ) -> None:

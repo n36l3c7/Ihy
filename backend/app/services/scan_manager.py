@@ -34,7 +34,7 @@ class ScanManager:
     def running(self) -> bool:
         return self._running
 
-    def start(self) -> bool:
+    def start(self, full: bool = False) -> bool:
         """Start a scan in the background. Returns False when one is already running."""
         with self._lock:
             if self._running:
@@ -43,13 +43,15 @@ class ScanManager:
         self.started_at = _utcnow()
         self.finished_at = None
         self.error = None
-        threading.Thread(target=self._run, name="library-scan", daemon=True).start()
+        threading.Thread(
+            target=self._run, args=(full,), name="library-scan", daemon=True
+        ).start()
         return True
 
-    def _run(self) -> None:
+    def _run(self, full: bool) -> None:
         try:
             with self._session_factory() as db:
-                self.last_result = scan_library(db, self._read_tags)
+                self.last_result = scan_library(db, self._read_tags, full=full)
         except Exception as exc:
             self.error = f"{type(exc).__name__}: {exc}"
         finally:

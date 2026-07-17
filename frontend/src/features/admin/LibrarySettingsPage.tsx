@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, X } from "lucide-react";
+import { Plus, RefreshCw, X } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 
-import { getLibrarySettings, updateLibrarySettings } from "../../api/admin";
+import { getLibrarySettings, startScan, updateLibrarySettings } from "../../api/admin";
 import { PageSpinner } from "../../components/Spinner";
 import { buttonClass, inputClass } from "../auth/LoginPage";
 
@@ -27,6 +27,11 @@ export function LibrarySettingsPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     },
+  });
+
+  const rescanMutation = useMutation({
+    mutationFn: () => startScan(true),
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: ["scan-status"] }),
   });
 
   if (query.isPending || separators === null) return <PageSpinner />;
@@ -104,11 +109,27 @@ export function LibrarySettingsPage() {
           >
             {saveMutation.isPending ? "Saving..." : "Save"}
           </button>
+          <button
+            type="button"
+            onClick={() => rescanMutation.mutate()}
+            disabled={rescanMutation.isPending}
+            className="flex items-center gap-2 rounded-md border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Run full rescan
+          </button>
           {saved && <span className="text-sm text-emerald-500">Saved.</span>}
-          {saveMutation.isError && (
-            <span className="text-sm text-red-400">Failed to save settings.</span>
+          {rescanMutation.isSuccess && (
+            <span className="text-sm text-emerald-500">Full rescan started.</span>
+          )}
+          {(saveMutation.isError || rescanMutation.isError) && (
+            <span className="text-sm text-red-400">Something went wrong.</span>
           )}
         </div>
+        <p className="mt-3 text-xs text-zinc-500">
+          A normal scan skips unchanged files, so after changing separators run a full
+          rescan to re-split the existing library.
+        </p>
       </div>
     </div>
   );
