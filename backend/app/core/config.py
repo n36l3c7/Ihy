@@ -21,7 +21,8 @@ class Settings(BaseSettings):
     database_url: str = ""
 
     # Security
-    secret_key: str = "change-me-in-production"
+    # Must be at least 32 bytes for HS256; always override in production
+    secret_key: str = "insecure-dev-only-secret-key-change-me-in-production"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 30
 
