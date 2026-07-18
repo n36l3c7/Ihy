@@ -35,6 +35,30 @@
   --color-zinc-800: #19191c;
 }
 
+/* Neon Nile: CRT teal-black with faience-cyan accents (Egypt x cyberpunk) */
+:root[data-theme="neon-nile"] {
+  --color-emerald-400: #33ffe0;
+  --color-emerald-500: #00e5c7;
+  --color-emerald-600: #00b39c;
+  --color-zinc-950: #04080a;
+  --color-zinc-900: #071013;
+  --color-zinc-800: #0f2b2a;
+  --color-zinc-700: #17403c;
+  --color-zinc-600: #2a5c53;
+  --color-zinc-500: #4e8b7f;
+  --color-zinc-400: #7fbfae;
+  --color-zinc-300: #b7ead9;
+  --color-zinc-200: #d9fff4;
+  --color-zinc-100: #eafff9;
+}
+
+/* The sistrum mark picks up a chromatic glitch aura under Neon Nile */
+:root[data-theme="neon-nile"] .app-logo {
+  filter: drop-shadow(2px 0 0 rgba(255, 61, 129, 0.6))
+    drop-shadow(-2px 0 0 rgba(255, 182, 46, 0.45))
+    drop-shadow(0 0 6px rgba(0, 229, 199, 0.6));
+}
+
 html,
 body,
 #root {

@@ -12,6 +12,7 @@ export const THEMES: Theme[] = [
   { id: "rose", label: "Rose", swatch: "#f43f5e" },
   { id: "amber", label: "Amber", swatch: "#f59e0b" },
   { id: "monochrome", label: "Monochrome", swatch: "#fafafa" },
+  { id: "neon-nile", label: "Neon Nile", swatch: "#00e5c7" },
 ];
 
 const STORAGE_KEY = "ihy-theme";

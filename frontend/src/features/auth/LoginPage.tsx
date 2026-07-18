@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 
 import { getMe, getSetupStatus, login } from "../../api/auth";
 import { ApiError } from "../../api/http";
+import { HieroglyphRain } from "../../components/HieroglyphRain";
 import { Logo } from "../../components/Logo";
 import { useAuthStore } from "../../stores/authStore";
 
@@ -50,12 +51,13 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col items-center justify-center bg-zinc-950 text-zinc-100">
-      <div className="mb-8 flex items-center gap-3">
+    <div className="relative flex h-screen flex-col items-center justify-center overflow-hidden bg-zinc-950 text-zinc-100">
+      <HieroglyphRain className="absolute inset-0 h-full w-full opacity-40" />
+      <div className="relative z-10 mb-8 flex items-center gap-3">
         <Logo className="h-12 w-12 text-emerald-500" />
         <h1 className="text-4xl font-bold tracking-tight">Ihy</h1>
       </div>
-      <form onSubmit={handleSubmit} className="flex w-80 flex-col gap-3">
+      <form onSubmit={handleSubmit} className="relative z-10 flex w-80 flex-col gap-3">
         <input
           className={inputClass}
           placeholder="Username"

@@ -2,7 +2,12 @@
  *  as equalizer bars. Monochrome via currentColor so it follows the theme. */
 export function Logo({ className }: { className?: string }) {
   return (
-    <svg viewBox="36 34 128 152" className={className} fill="none" aria-hidden="true">
+    <svg
+      viewBox="36 34 128 152"
+      className={`app-logo ${className ?? ""}`}
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M62,118 L62,86 A38,42 0 0 1 138,86 L138,118"
         stroke="currentColor"
