@@ -5,6 +5,7 @@ import {
   Compass,
   Disc3,
   Folder,
+  HardDriveDownload,
   Heart,
   History,
   House,
@@ -39,6 +40,7 @@ import {
 import { SmartPlaylistDialog } from "../features/playlists/SmartPlaylistDialog";
 import { PlayerBar } from "../features/player/PlayerBar";
 import { QueuePanel } from "../features/player/QueuePanel";
+import { initCast } from "../lib/cast";
 import { seekRelative } from "../lib/playerControls";
 import { initPlayerSync } from "../lib/playerSync";
 import { initSessionPersistence, restoreSession } from "../lib/session";
@@ -62,6 +64,7 @@ const PERSONAL_ITEMS = [
   { to: "/favorites", label: "Liked songs", icon: Heart },
   { to: "/history", label: "Recently played", icon: History },
   { to: "/bookmarks", label: "Bookmarks", icon: Bookmark },
+  { to: "/downloads", label: "Downloads", icon: HardDriveDownload },
   { to: "/stats", label: "Statistics", icon: ChartColumn },
 ];
 
@@ -96,6 +99,7 @@ export function Layout() {
   useEffect(() => {
     initPlayerSync();
     initSessionPersistence();
+    initCast();
     const timer = setTimeout(() => void restoreSession(), 800);
     return () => clearTimeout(timer);
   }, []);

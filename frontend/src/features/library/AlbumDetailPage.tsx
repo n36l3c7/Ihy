@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ImagePlus, Pencil, Play, Trash2 } from "lucide-react";
+import { HardDriveDownload, ImagePlus, Pencil, Play, Trash2 } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 
@@ -10,6 +10,7 @@ import { GradientHeader } from "../../components/GradientHeader";
 import { PageSpinner } from "../../components/Spinner";
 import { formatTotalDuration } from "../../lib/format";
 import { albumCoverUrl } from "../../lib/mediaUrls";
+import { downloadTracks, offlineSupported } from "../../lib/offline";
 import { useAuthStore } from "../../stores/authStore";
 import { usePlayerStore } from "../../stores/playerStore";
 import { AlbumTracksEditor } from "../tag-editor/AlbumTracksEditor";
@@ -33,6 +34,7 @@ export function AlbumDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [tracksEditorOpen, setTracksEditorOpen] = useState(false);
   const [coverVersion, setCoverVersion] = useState(0);
+  const [downloadProgress, setDownloadProgress] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const query = useQuery({
@@ -52,6 +54,24 @@ export function AlbumDetailPage() {
     const file = event.target.files?.[0];
     if (file) coverMutation.mutate(file);
     event.target.value = "";
+  };
+
+  const handleOfflineDownload = async () => {
+    const tracks = query.data?.tracks ?? [];
+    if (tracks.length === 0) return;
+    setDownloadProgress(`0/${tracks.length}`);
+    try {
+      const result = await downloadTracks(tracks, (done, total) =>
+        setDownloadProgress(`${done}/${total}`),
+      );
+      setDownloadProgress(null);
+      if (result.failed > 0) {
+        window.alert(`${result.failed} tracks could not be downloaded.`);
+      }
+    } catch {
+      setDownloadProgress(null);
+      window.alert("Offline downloads need HTTPS (or localhost).");
+    }
   };
 
   if (query.isPending) return <PageSpinner />;
@@ -185,6 +205,21 @@ export function AlbumDetailPage() {
                 <Trash2 className="h-5 w-5" />
               </button>
             </>
+          )}
+          {offlineSupported() && (
+            <button
+              type="button"
+              onClick={() => void handleOfflineDownload()}
+              disabled={downloadProgress !== null}
+              className="flex items-center gap-1.5 rounded-full p-2.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-40"
+              aria-label="Download for offline playback"
+              title="Download for offline playback"
+            >
+              <HardDriveDownload className="h-5 w-5" />
+              {downloadProgress && (
+                <span className="text-xs tabular-nums">{downloadProgress}</span>
+              )}
+            </button>
           )}
           <button
             type="button"

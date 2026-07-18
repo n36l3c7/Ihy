@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { getRadioTracks } from "../../api/catalog";
 import type { Track } from "../../api/types";
 import { recordPlay } from "../../api/userLibrary";
+import { castPlayPause, castSeek, syncCastTrack } from "../../lib/cast";
 import { sendCommand } from "../../lib/syncBus";
 import { useAuthStore } from "../../stores/authStore";
+import { useCastStore } from "../../stores/castStore";
 import { EQ_FREQUENCIES, useEqStore } from "../../stores/eqStore";
 import {
   selectCurrentTrack,
@@ -52,6 +54,9 @@ export function usePlayerAudio() {
   const lastKnownTime = usePlayerStore((state) => state.lastKnownTime);
   const remoteSeekRequest = usePlayerStore((state) => state.remoteSeekRequest);
   const normalizeVolume = usePlayerStore((state) => state.normalizeVolume);
+  const castConnected = useCastStore((state) => state.connected);
+  const castRemoteTime = useCastStore((state) => state.remoteTime);
+  const wasCastingRef = useRef(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const lastRecordedRef = useRef<Track | null>(null);
@@ -139,10 +144,29 @@ export function usePlayerAudio() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRemote, remoteSeekRequest]);
 
+  // While casting, the receiver plays and the local elements stay silent;
+  // when the session ends, resume locally from the last known position.
+  useEffect(() => {
+    if (castConnected) {
+      wasCastingRef.current = true;
+      elements.forEach((element) => element.pause());
+    } else if (wasCastingRef.current) {
+      wasCastingRef.current = false;
+      usePlayerStore.setState({
+        pendingSeekSeconds: usePlayerStore.getState().lastKnownTime,
+      });
+    }
+  }, [castConnected, elements]);
+
   // Switch source when the current track changes. A gapless/crossfade swap
   // has already loaded and started the right element — leave it alone.
   useEffect(() => {
     if (isRemote) return;
+    if (castConnected) {
+      syncCastTrack(currentTrack);
+      setDuration(currentTrack?.duration ?? 0);
+      return;
+    }
     if (!currentTrack) {
       resetElement(0);
       resetElement(1);
@@ -180,7 +204,7 @@ export function usePlayerAudio() {
       void element.play().catch(() => usePlayerStore.getState().setPlaying(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTrack, isRemote]);
+  }, [currentTrack, isRemote, castConnected]);
 
   // Re-apply normalization gain when the toggle changes
   useEffect(() => {
@@ -196,6 +220,10 @@ export function usePlayerAudio() {
   // Sync play/pause intent
   useEffect(() => {
     if (isRemote || !currentTrack) return;
+    if (castConnected) {
+      castPlayPause(isPlaying);
+      return;
+    }
     if (isPlaying) {
       // Browsers keep the AudioContext suspended until a user gesture
       void audioContextRef.current?.resume().catch(() => {});
@@ -206,7 +234,7 @@ export function usePlayerAudio() {
       active().pause();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, currentTrack, isRemote]);
+  }, [isPlaying, currentTrack, isRemote, castConnected]);
 
   useEffect(() => {
     elements.forEach((element) => {
@@ -404,6 +432,10 @@ export function usePlayerAudio() {
       sendCommand("seek", time);
       return;
     }
+    if (castConnected) {
+      castSeek(time);
+      return;
+    }
     active().currentTime = time;
     setCurrentTime(time);
   };
@@ -419,8 +451,9 @@ export function usePlayerAudio() {
   };
 
   return {
-    currentTime: isRemote ? lastKnownTime : currentTime,
-    duration: isRemote ? (currentTrack?.duration ?? 0) : duration,
+    currentTime: isRemote ? lastKnownTime : castConnected ? castRemoteTime : currentTime,
+    duration:
+      isRemote || castConnected ? (currentTrack?.duration ?? 0) : duration,
     seek,
     restartOrPrevious,
   };

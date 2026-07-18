@@ -24,6 +24,7 @@ import { BookmarksPage } from "./features/library/BookmarksPage";
 import { ExplorePage } from "./features/library/ExplorePage";
 import { FavoritesPage } from "./features/library/FavoritesPage";
 import { FoldersPage } from "./features/library/FoldersPage";
+import { DownloadsPage } from "./features/library/DownloadsPage";
 import { HomePage } from "./features/library/HomePage";
 import { GenresPage } from "./features/library/GenresPage";
 import { HistoryPage } from "./features/library/HistoryPage";
@@ -76,6 +77,7 @@ const router = createBrowserRouter([
           { path: "/history", element: <HistoryPage /> },
           { path: "/folders", element: <FoldersPage /> },
           { path: "/bookmarks", element: <BookmarksPage /> },
+          { path: "/downloads", element: <DownloadsPage /> },
           { path: "/stats", element: <StatsPage /> },
           { path: "/playlists/:playlistId", element: <PlaylistPage /> },
           { path: "/smart/:smartId", element: <SmartPlaylistPage /> },

@@ -4,6 +4,7 @@ import {
   ChartColumn,
   Disc3,
   Folder,
+  HardDriveDownload,
   Heart,
   History,
   ListMusic,
@@ -31,6 +32,7 @@ const SECTIONS: { to: string; label: string; icon: typeof Music2 }[] = [
   { to: "/favorites", label: "Liked songs", icon: Heart },
   { to: "/history", label: "Recently played", icon: History },
   { to: "/bookmarks", label: "Bookmarks", icon: Bookmark },
+  { to: "/downloads", label: "Downloads", icon: HardDriveDownload },
   { to: "/stats", label: "Statistics", icon: ChartColumn },
   { to: "/scrobbling", label: "Scrobbling", icon: Radio },
 ];

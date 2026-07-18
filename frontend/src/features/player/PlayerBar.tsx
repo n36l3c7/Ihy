@@ -1,5 +1,6 @@
 import {
   BookmarkPlus,
+  Cast,
   ListOrdered,
   MicVocal,
   Moon,
@@ -19,7 +20,9 @@ import { Link } from "react-router";
 import { createBookmark } from "../../api/wave3";
 import { CoverImage } from "../../components/CoverImage";
 import { FavoriteButton } from "../../components/FavoriteButton";
+import { castStop, requestCastSession } from "../../lib/cast";
 import { formatDuration } from "../../lib/format";
+import { useCastStore } from "../../stores/castStore";
 import { useEqStore } from "../../stores/eqStore";
 import { selectCurrentTrack, usePlayerStore } from "../../stores/playerStore";
 import { EqualizerDialog } from "./EqualizerDialog";
@@ -115,6 +118,9 @@ export function PlayerBar() {
   const eqEnabled = useEqStore((state) => state.enabled);
   const syncRole = usePlayerStore((state) => state.syncRole);
   const takeOver = usePlayerStore((state) => state.takeOver);
+  const castAvailable = useCastStore((state) => state.available);
+  const castConnected = useCastStore((state) => state.connected);
+  const castDeviceName = useCastStore((state) => state.deviceName);
 
   if (!track) return null;
 
@@ -143,6 +149,18 @@ export function PlayerBar() {
           style={{ width: `${duration ? Math.min(100, (currentTime / duration) * 100) : 0}%` }}
         />
       </div>
+      {castConnected && (
+        <div className="mb-2 flex items-center justify-center gap-3 rounded-md bg-emerald-600/10 py-1 text-xs text-emerald-400">
+          Playing on {castDeviceName ?? "Chromecast"}
+          <button
+            type="button"
+            onClick={castStop}
+            className="rounded-full border border-emerald-600/50 px-3 py-0.5 font-medium transition-colors hover:bg-emerald-600/20"
+          >
+            Stop casting
+          </button>
+        </div>
+      )}
       {syncRole === "remote" && (
         <div className="mb-2 flex items-center justify-center gap-3 rounded-md bg-emerald-600/10 py-1 text-xs text-emerald-400">
           Playing in another tab — this tab is a remote control
@@ -419,6 +437,19 @@ export function PlayerBar() {
           >
             <BookmarkPlus className="h-4 w-4" />
           </button>
+          {castAvailable && (
+            <button
+              type="button"
+              onClick={() => (castConnected ? castStop() : requestCastSession())}
+              className={`rounded-full p-2 transition-colors hover:text-zinc-100 ${
+                castConnected ? "text-emerald-500" : ""
+              }`}
+              aria-label={castConnected ? "Stop casting" : "Cast to device"}
+              title={castConnected ? `Casting to ${castDeviceName ?? "device"}` : "Cast"}
+            >
+              <Cast className="h-4 w-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setEqOpen(true)}

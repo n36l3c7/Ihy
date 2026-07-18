@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, ListMusic, Play, Trash2, X } from "lucide-react";
+import { Download, HardDriveDownload, ListMusic, Play, Trash2, X } from "lucide-react";
 import { type MouseEvent, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
@@ -13,6 +13,7 @@ import {
 } from "../../api/userLibrary";
 import { PageSpinner } from "../../components/Spinner";
 import { formatTotalDuration } from "../../lib/format";
+import { downloadTracks, offlineSupported } from "../../lib/offline";
 import { usePlayerStore } from "../../stores/playerStore";
 import { TrackList } from "../library/TrackList";
 
@@ -23,6 +24,7 @@ export function PlaylistPage() {
   const queryClient = useQueryClient();
   const playQueue = usePlayerStore((state) => state.playQueue);
   const [editedName, setEditedName] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["playlist", playlistId],
@@ -82,6 +84,22 @@ export function PlaylistPage() {
     if (window.confirm(`Delete playlist "${playlist.name}"?`)) deleteMutation.mutate();
   };
 
+  const handleOfflineDownload = async () => {
+    setDownloadProgress("0/" + tracks.length);
+    try {
+      const result = await downloadTracks(tracks, (done, total) =>
+        setDownloadProgress(`${done}/${total}`),
+      );
+      setDownloadProgress(null);
+      if (result.failed > 0) {
+        window.alert(`${result.failed} tracks could not be downloaded.`);
+      }
+    } catch {
+      setDownloadProgress(null);
+      window.alert("Offline downloads need HTTPS (or localhost).");
+    }
+  };
+
   return (
     <div>
       <div className="mb-8 flex items-end gap-6">
@@ -114,6 +132,21 @@ export function PlaylistPage() {
             <Play className="h-4 w-4" />
             Play
           </button>
+          {offlineSupported() && (
+            <button
+              type="button"
+              onClick={() => void handleOfflineDownload()}
+              disabled={tracks.length === 0 || downloadProgress !== null}
+              className="flex items-center gap-1.5 rounded-full p-2.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-40"
+              aria-label="Download for offline playback"
+              title="Download for offline playback"
+            >
+              <HardDriveDownload className="h-5 w-5" />
+              {downloadProgress && (
+                <span className="text-xs tabular-nums">{downloadProgress}</span>
+              )}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void downloadPlaylistExport(id, playlist.name)}
