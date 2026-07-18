@@ -2,36 +2,35 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 
 import { type BatchTagChanges, batchUpdateTags } from "../../api/tags";
-import type { AlbumDetail } from "../../api/types";
 import { Modal } from "../../components/Modal";
 import { buttonClass, inputClass } from "../auth/LoginPage";
 import { parseListField, parseNumberField, parseTextField } from "./tagFormUtils";
 
-interface AlbumTagsDialogProps {
-  album: AlbumDetail;
+interface BatchTagsDialogProps {
+  trackIds: number[];
+  heading: string;
+  /** Prefilled values (e.g. from an album). Empty fields are left untouched. */
+  initial?: Partial<{ artists: string; album: string; album_artist: string; year: string }>;
   onClose: () => void;
 }
 
 const labelClass = "mb-1 block text-xs font-medium text-zinc-400";
 
-export function AlbumTagsDialog({ album, onClose }: AlbumTagsDialogProps) {
+export function BatchTagsDialog({ trackIds, heading, initial, onClose }: BatchTagsDialogProps) {
   const queryClient = useQueryClient();
 
-  const initial = {
-    album: album.title,
-    album_artist: album.artist?.name ?? "",
+  const initialForm = {
+    artists: initial?.artists ?? "",
+    album: initial?.album ?? "",
+    album_artist: initial?.album_artist ?? "",
     genres: "",
-    year: album.year?.toString() ?? "",
+    year: initial?.year ?? "",
   };
-  const [form, setForm] = useState(initial);
+  const [form, setForm] = useState(initialForm);
   const [result, setResult] = useState<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: (changes: BatchTagChanges) =>
-      batchUpdateTags(
-        album.tracks.map((track) => track.id),
-        changes,
-      ),
+    mutationFn: (changes: BatchTagChanges) => batchUpdateTags(trackIds, changes),
     onSuccess: (data) => {
       void queryClient.invalidateQueries();
       if (data.errors.length > 0) {
@@ -42,19 +41,21 @@ export function AlbumTagsDialog({ album, onClose }: AlbumTagsDialogProps) {
     },
   });
 
-  const set = (field: keyof typeof initial) => (event: { target: { value: string } }) =>
+  const set = (field: keyof typeof initialForm) => (event: { target: { value: string } }) =>
     setForm((current) => ({ ...current, [field]: event.target.value }));
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     const changes: BatchTagChanges = {};
-    const albumTitle = parseTextField(form.album, initial.album);
-    if (albumTitle !== undefined) changes.album = albumTitle;
-    const albumArtist = parseTextField(form.album_artist, initial.album_artist);
+    const artists = parseListField(form.artists, initialForm.artists);
+    if (artists !== undefined) changes.artists = artists;
+    const album = parseTextField(form.album, initialForm.album);
+    if (album !== undefined) changes.album = album;
+    const albumArtist = parseTextField(form.album_artist, initialForm.album_artist);
     if (albumArtist !== undefined) changes.album_artist = albumArtist;
-    const genres = parseListField(form.genres, initial.genres);
+    const genres = parseListField(form.genres, initialForm.genres);
     if (genres !== undefined) changes.genres = genres;
-    const year = parseNumberField(form.year, initial.year);
+    const year = parseNumberField(form.year, initialForm.year);
     if (year !== undefined) changes.year = year;
 
     if (Object.keys(changes).length === 0) {
@@ -65,10 +66,17 @@ export function AlbumTagsDialog({ album, onClose }: AlbumTagsDialogProps) {
   };
 
   return (
-    <Modal title={`Edit tags for all ${album.tracks.length} tracks`} onClose={onClose}>
+    <Modal title={heading} onClose={onClose}>
+      <p className="mb-4 text-xs text-zinc-500">
+        Only the fields you change are written to the files; the rest stay untouched.
+      </p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
-          <label className={labelClass}>Album title</label>
+          <label className={labelClass}>Artists (separate multiple with ;)</label>
+          <input className={inputClass} value={form.artists} onChange={set("artists")} />
+        </div>
+        <div>
+          <label className={labelClass}>Album</label>
           <input className={inputClass} value={form.album} onChange={set("album")} />
         </div>
         <div>
@@ -76,9 +84,7 @@ export function AlbumTagsDialog({ album, onClose }: AlbumTagsDialogProps) {
           <input className={inputClass} value={form.album_artist} onChange={set("album_artist")} />
         </div>
         <div>
-          <label className={labelClass}>
-            Genres (separate multiple with ; — leave empty to keep current)
-          </label>
+          <label className={labelClass}>Genres (separate multiple with ;)</label>
           <input className={inputClass} value={form.genres} onChange={set("genres")} />
         </div>
         <div className="w-32">
@@ -105,7 +111,7 @@ export function AlbumTagsDialog({ album, onClose }: AlbumTagsDialogProps) {
             disabled={mutation.isPending}
             className={`${buttonClass} w-auto px-6`}
           >
-            {mutation.isPending ? "Saving..." : "Apply to all tracks"}
+            {mutation.isPending ? "Saving..." : `Apply to ${trackIds.length} tracks`}
           </button>
         </div>
       </form>

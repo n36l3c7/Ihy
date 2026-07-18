@@ -10,7 +10,7 @@ import { PageSpinner } from "../../components/Spinner";
 import { formatTotalDuration } from "../../lib/format";
 import { useAuthStore } from "../../stores/authStore";
 import { usePlayerStore } from "../../stores/playerStore";
-import { AlbumTagsDialog } from "../tag-editor/AlbumTagsDialog";
+import { BatchTagsDialog } from "../tag-editor/BatchTagsDialog";
 import { TrackList } from "./TrackList";
 
 export function AlbumDetailPage() {
@@ -50,7 +50,18 @@ export function AlbumDetailPage() {
 
   return (
     <div>
-      {editOpen && <AlbumTagsDialog album={album} onClose={() => setEditOpen(false)} />}
+      {editOpen && (
+        <BatchTagsDialog
+          trackIds={album.tracks.map((track) => track.id)}
+          heading={`Edit tags for all ${album.tracks.length} tracks`}
+          initial={{
+            album: album.title,
+            album_artist: album.artist?.name ?? "",
+            year: album.year?.toString() ?? "",
+          }}
+          onClose={() => setEditOpen(false)}
+        />
+      )}
       <div className="mb-8 flex items-end gap-6">
         <div className="group relative shrink-0">
           <CoverImage

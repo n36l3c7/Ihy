@@ -1,27 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ListPlus } from "lucide-react";
-import { type MouseEvent, useEffect, useRef, useState } from "react";
+import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 
 import { addTrackToPlaylist, getPlaylists } from "../../api/userLibrary";
 
-export function AddToPlaylistMenu({ trackId }: { trackId: number }) {
+interface PlaylistDropdownProps {
+  buttonContent: ReactNode;
+  buttonClassName: string;
+  ariaLabel: string;
+  onPick: (playlistId: number) => void;
+}
+
+/** A button opening a dropdown with the user's playlists. */
+export function PlaylistDropdown({
+  buttonContent,
+  buttonClassName,
+  ariaLabel,
+  onPick,
+}: PlaylistDropdownProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
 
   const playlists = useQuery({
     queryKey: ["playlists"],
     queryFn: getPlaylists,
     enabled: open,
-  });
-
-  const addMutation = useMutation({
-    mutationFn: (playlistId: number) => addTrackToPlaylist(playlistId, trackId),
-    onSuccess: (_item, playlistId) => {
-      void queryClient.invalidateQueries({ queryKey: ["playlists"] });
-      void queryClient.invalidateQueries({ queryKey: ["playlist", String(playlistId)] });
-      setOpen(false);
-    },
   });
 
   useEffect(() => {
@@ -42,13 +45,8 @@ export function AddToPlaylistMenu({ trackId }: { trackId: number }) {
 
   return (
     <div className="relative" ref={containerRef}>
-      <button
-        type="button"
-        onClick={handleToggle}
-        className="rounded-full p-1.5 text-zinc-500 transition-colors hover:bg-zinc-700/50 hover:text-zinc-200"
-        aria-label="Add to playlist"
-      >
-        <ListPlus className="h-4 w-4" />
+      <button type="button" onClick={handleToggle} className={buttonClassName} aria-label={ariaLabel}>
+        {buttonContent}
       </button>
       {open && (
         <div
@@ -63,7 +61,10 @@ export function AddToPlaylistMenu({ trackId }: { trackId: number }) {
               <button
                 key={playlist.id}
                 type="button"
-                onClick={() => addMutation.mutate(playlist.id)}
+                onClick={() => {
+                  onPick(playlist.id);
+                  setOpen(false);
+                }}
                 className="block w-full truncate px-3 py-1.5 text-left text-sm text-zinc-200 transition-colors hover:bg-zinc-800"
               >
                 {playlist.name}
@@ -75,5 +76,26 @@ export function AddToPlaylistMenu({ trackId }: { trackId: number }) {
         </div>
       )}
     </div>
+  );
+}
+
+export function AddToPlaylistMenu({ trackId }: { trackId: number }) {
+  const queryClient = useQueryClient();
+
+  const addMutation = useMutation({
+    mutationFn: (playlistId: number) => addTrackToPlaylist(playlistId, trackId),
+    onSuccess: (_item, playlistId) => {
+      void queryClient.invalidateQueries({ queryKey: ["playlists"] });
+      void queryClient.invalidateQueries({ queryKey: ["playlist", String(playlistId)] });
+    },
+  });
+
+  return (
+    <PlaylistDropdown
+      buttonContent={<ListPlus className="h-4 w-4" />}
+      buttonClassName="rounded-full p-1.5 text-zinc-500 transition-colors hover:bg-zinc-700/50 hover:text-zinc-200"
+      ariaLabel="Add to playlist"
+      onPick={(playlistId) => addMutation.mutate(playlistId)}
+    />
   );
 }
