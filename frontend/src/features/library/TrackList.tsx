@@ -47,7 +47,7 @@ export function TrackList({
   const queryClient = useQueryClient();
 
   const [editingTrack, setEditingTrack] = useState<Track | null>(null);
-  const [batchEditIds, setBatchEditIds] = useState<number[] | null>(null);
+  const [batchEditTracks, setBatchEditTracks] = useState<Track[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [menu, setMenu] = useState<MenuState | null>(null);
   const lastToggledRef = useRef<number | null>(null);
@@ -109,7 +109,7 @@ export function TrackList({
     if (indices.length === 1) {
       setEditingTrack(tracks[indices[0]]);
     } else {
-      setBatchEditIds(indices.map((i) => tracks[i].id));
+      setBatchEditTracks(indices.map((i) => tracks[i]));
     }
   };
 
@@ -122,11 +122,11 @@ export function TrackList({
       {editingTrack && (
         <TagEditorDialog track={editingTrack} onClose={() => setEditingTrack(null)} />
       )}
-      {batchEditIds && (
+      {batchEditTracks && (
         <BatchTagsDialog
-          trackIds={batchEditIds}
-          heading={`Edit tags for ${batchEditIds.length} tracks`}
-          onClose={() => setBatchEditIds(null)}
+          tracks={batchEditTracks}
+          heading={`Edit tags for ${batchEditTracks.length} tracks`}
+          onClose={() => setBatchEditTracks(null)}
         />
       )}
 

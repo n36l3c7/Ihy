@@ -1,11 +1,17 @@
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 
 import { Layout } from "./components/Layout";
-import { DownloadsPage } from "./features/admin/DownloadsPage";
 import { LibrarySettingsPage } from "./features/admin/LibrarySettingsPage";
 import { SettingsLayout } from "./features/admin/SettingsLayout";
 import { SourcesPage } from "./features/admin/SourcesPage";
-import { UsersPage } from "./features/admin/UsersPage";
+import { SpotdlActivityPage } from "./features/admin/spotdl/SpotdlActivityPage";
+import { SpotdlLayout } from "./features/admin/spotdl/SpotdlLayout";
+import { SpotdlSettingsPage } from "./features/admin/spotdl/SpotdlSettingsPage";
+import { WatchesPage } from "./features/admin/spotdl/WatchesPage";
+import { UserCreatePage } from "./features/admin/users/UserCreatePage";
+import { UserEditPage } from "./features/admin/users/UserEditPage";
+import { UsersLayout } from "./features/admin/users/UsersLayout";
+import { UsersListPage } from "./features/admin/users/UsersListPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { RequireAuth } from "./features/auth/RequireAuth";
 import { SetupPage } from "./features/auth/SetupPage";
@@ -45,8 +51,24 @@ const router = createBrowserRouter([
               { index: true, element: <Navigate to="/settings/sources" replace /> },
               { path: "sources", element: <SourcesPage /> },
               { path: "library", element: <LibrarySettingsPage /> },
-              { path: "users", element: <UsersPage /> },
-              { path: "downloads", element: <DownloadsPage /> },
+              {
+                path: "users",
+                element: <UsersLayout />,
+                children: [
+                  { index: true, element: <UsersListPage /> },
+                  { path: "new", element: <UserCreatePage /> },
+                  { path: ":userId", element: <UserEditPage /> },
+                ],
+              },
+              {
+                path: "spotdl",
+                element: <SpotdlLayout />,
+                children: [
+                  { index: true, element: <WatchesPage /> },
+                  { path: "options", element: <SpotdlSettingsPage /> },
+                  { path: "activity", element: <SpotdlActivityPage /> },
+                ],
+              },
             ],
           },
           { path: "*", element: <Navigate to="/tracks" replace /> },

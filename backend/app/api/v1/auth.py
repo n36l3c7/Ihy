@@ -47,6 +47,8 @@ def create_first_admin(payload: UserCreate, db: DbDep) -> User:
         password=payload.password,
         email=payload.email,
         role=UserRole.ADMIN,
+        first_name=payload.first_name,
+        last_name=payload.last_name,
     )
 
 

@@ -40,12 +40,21 @@ def create(
     password: str,
     email: str | None = None,
     role: UserRole = UserRole.USER,
+    first_name: str | None = None,
+    last_name: str | None = None,
 ) -> User:
     if get_by_username(db, username) is not None:
         raise DuplicateUserError("username")
     if email is not None and db.scalar(select(User).where(User.email == email)) is not None:
         raise DuplicateUserError("email")
-    user = User(username=username, email=email, password_hash=hash_password(password), role=role)
+    user = User(
+        username=username,
+        email=email,
+        password_hash=hash_password(password),
+        role=role,
+        first_name=first_name,
+        last_name=last_name,
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -75,7 +84,7 @@ def update(db: Session, user: User, changes: dict[str, Any]) -> User:
     password = changes.pop("password", None)
     if password is not None:
         user.password_hash = hash_password(password)
-    for field in ("email", "role", "is_active"):
+    for field in ("email", "role", "is_active", "first_name", "last_name"):
         if field in changes:
             setattr(user, field, changes[field])
     db.commit()

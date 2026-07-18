@@ -2,29 +2,39 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 
 import { type BatchTagChanges, batchUpdateTags } from "../../api/tags";
+import type { Track } from "../../api/types";
 import { Modal } from "../../components/Modal";
 import { buttonClass, inputClass } from "../auth/LoginPage";
-import { parseListField, parseNumberField, parseTextField } from "./tagFormUtils";
+import { joinListField, parseListField, parseNumberField, parseTextField } from "./tagFormUtils";
 
 interface BatchTagsDialogProps {
-  trackIds: number[];
+  tracks: Track[];
   heading: string;
-  /** Prefilled values (e.g. from an album). Empty fields are left untouched. */
-  initial?: Partial<{ artists: string; album: string; album_artist: string; year: string }>;
+  /** Album artist is not part of TrackRead; the album page can prefill it. */
+  albumArtist?: string;
   onClose: () => void;
 }
 
 const labelClass = "mb-1 block text-xs font-medium text-zinc-400";
 
-export function BatchTagsDialog({ trackIds, heading, initial, onClose }: BatchTagsDialogProps) {
+/** Shown when the selected tracks disagree on a field's value. */
+export const MULTIPLE_VALUES = "<Multiple>";
+
+function commonValue(values: string[]): string {
+  if (values.length === 0) return "";
+  return values.every((value) => value === values[0]) ? values[0] : MULTIPLE_VALUES;
+}
+
+export function BatchTagsDialog({ tracks, heading, albumArtist, onClose }: BatchTagsDialogProps) {
   const queryClient = useQueryClient();
+  const trackIds = [...new Set(tracks.map((track) => track.id))];
 
   const initialForm = {
-    artists: initial?.artists ?? "",
-    album: initial?.album ?? "",
-    album_artist: initial?.album_artist ?? "",
-    genres: "",
-    year: initial?.year ?? "",
+    artists: commonValue(tracks.map((track) => joinListField(track.artists))),
+    album: commonValue(tracks.map((track) => track.album?.title ?? "")),
+    album_artist: albumArtist ?? "",
+    genres: commonValue(tracks.map((track) => joinListField(track.genres))),
+    year: commonValue(tracks.map((track) => track.year?.toString() ?? "")),
   };
   const [form, setForm] = useState(initialForm);
   const [result, setResult] = useState<string | null>(null);
@@ -69,6 +79,7 @@ export function BatchTagsDialog({ trackIds, heading, initial, onClose }: BatchTa
     <Modal title={heading} onClose={onClose}>
       <p className="mb-4 text-xs text-zinc-500">
         Only the fields you change are written to the files; the rest stay untouched.
+        {` ${MULTIPLE_VALUES} means the selected tracks currently have different values.`}
       </p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>

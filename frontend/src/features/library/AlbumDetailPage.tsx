@@ -52,13 +52,9 @@ export function AlbumDetailPage() {
     <div>
       {editOpen && (
         <BatchTagsDialog
-          trackIds={album.tracks.map((track) => track.id)}
+          tracks={album.tracks}
           heading={`Edit tags for all ${album.tracks.length} tracks`}
-          initial={{
-            album: album.title,
-            album_artist: album.artist?.name ?? "",
-            year: album.year?.toString() ?? "",
-          }}
+          albumArtist={album.artist?.name ?? ""}
           onClose={() => setEditOpen(false)}
         />
       )}

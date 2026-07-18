@@ -7,6 +7,8 @@ from app.models.user import UserRole
 
 class UserBase(BaseModel):
     username: str = Field(min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_.-]+$")
+    first_name: str | None = Field(default=None, max_length=100)
+    last_name: str | None = Field(default=None, max_length=100)
     email: EmailStr | None = None
 
 
@@ -19,6 +21,8 @@ class AdminUserCreate(UserCreate):
 
 
 class UserUpdate(BaseModel):
+    first_name: str | None = Field(default=None, max_length=100)
+    last_name: str | None = Field(default=None, max_length=100)
     email: EmailStr | None = None
     password: str | None = Field(default=None, min_length=8, max_length=128)
     role: UserRole | None = None
@@ -30,6 +34,8 @@ class UserRead(BaseModel):
 
     id: int
     username: str
+    first_name: str | None
+    last_name: str | None
     email: EmailStr | None
     role: UserRole
     is_active: bool

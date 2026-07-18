@@ -1,12 +1,24 @@
-from fastapi import APIRouter, HTTPException, status
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import AdminUserDep, DbDep
 from app.models.downloads import DownloadWatch
 from app.models.library import Source
-from app.schemas.downloads import DownloadStatusRead, WatchCreate, WatchRead, WatchUpdate
+from app.schemas.downloads import (
+    DownloadLogRead,
+    DownloadStatusRead,
+    SpotifyArtistRead,
+    WatchCreate,
+    WatchRead,
+    WatchUpdate,
+)
+from app.services import app_settings
 from app.services import downloads as downloads_service
+from app.services import spotify as spotify_service
+from app.services.spotify import SpotifyError
 
 router = APIRouter()
 
@@ -61,6 +73,34 @@ def delete_watch(watch_id: int, db: DbDep, _admin: AdminUserDep) -> None:
     watch = _get_watch_or_404(db, watch_id)
     db.delete(watch)
     db.commit()
+
+
+@router.get("/spotify/search", response_model=list[SpotifyArtistRead])
+def spotify_search(
+    db: DbDep,
+    _admin: AdminUserDep,
+    q: Annotated[str, Query(min_length=2, max_length=200)],
+) -> list[dict]:
+    """Search artists on Spotify. Requires Spotify API credentials
+    (Settings -> SpotDL) from developer.spotify.com."""
+    options = app_settings.get_spotdl_options(db)
+    if not options.get("client_id") or not options.get("client_secret"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Spotify credentials are not configured (Settings -> SpotDL)",
+        )
+    try:
+        return spotify_service.search_artists(options["client_id"], options["client_secret"], q)
+    except SpotifyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from None
+
+
+@router.get("/log", response_model=DownloadLogRead)
+def download_log(_admin: AdminUserDep) -> DownloadLogRead:
+    """CLI output of the current/last watch check."""
+    return DownloadLogRead(lines=downloads_service.download_manager.log_lines)
 
 
 @router.get("/status", response_model=DownloadStatusRead)

@@ -10,6 +10,16 @@ DEFAULT_METADATA_SEPARATORS = ["/", ";"]
 DOWNLOAD_INTERVAL_KEY = "download_check_interval_hours"
 DEFAULT_DOWNLOAD_INTERVAL_HOURS = 24
 
+SPOTDL_OPTIONS_KEY = "spotdl_options"
+DEFAULT_SPOTDL_OPTIONS: dict = {
+    "output_format": None,
+    "bitrate": None,
+    "threads": None,
+    "extra_args": "",
+    "client_id": "",
+    "client_secret": "",
+}
+
 
 def _get_raw(db: Session, key: str) -> str | None:
     setting = db.get(AppSetting, key)
@@ -57,3 +67,22 @@ def get_download_interval_hours(db: Session) -> int:
 
 def set_download_interval_hours(db: Session, hours: int) -> None:
     _set_raw(db, DOWNLOAD_INTERVAL_KEY, json.dumps(hours))
+
+
+def get_spotdl_options(db: Session) -> dict:
+    """spotdl CLI options (format, bitrate, Spotify credentials, extra flags)."""
+    raw = _get_raw(db, SPOTDL_OPTIONS_KEY)
+    options = dict(DEFAULT_SPOTDL_OPTIONS)
+    if raw is None:
+        return options
+    try:
+        stored = json.loads(raw)
+    except json.JSONDecodeError:
+        return options
+    if isinstance(stored, dict):
+        options.update({key: stored[key] for key in options if key in stored})
+    return options
+
+
+def set_spotdl_options(db: Session, options: dict) -> None:
+    _set_raw(db, SPOTDL_OPTIONS_KEY, json.dumps(options))

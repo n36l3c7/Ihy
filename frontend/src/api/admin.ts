@@ -17,10 +17,14 @@ export interface UserCreatePayload {
   username: string;
   password: string;
   email?: string;
+  first_name?: string;
+  last_name?: string;
   role?: "admin" | "user";
 }
 
 export interface UserUpdatePayload {
+  first_name?: string | null;
+  last_name?: string | null;
   email?: string | null;
   password?: string;
   role?: "admin" | "user";
@@ -28,6 +32,8 @@ export interface UserUpdatePayload {
 }
 
 export const getUsers = () => api<User[]>("/users");
+
+export const getUser = (id: number) => api<User>(`/users/${id}`);
 
 export const createUser = (payload: UserCreatePayload) =>
   api<User>("/users", { method: "POST", body: JSON.stringify(payload) });

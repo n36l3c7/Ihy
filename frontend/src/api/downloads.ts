@@ -50,3 +50,30 @@ export const updateDownloadSettings = (settings: DownloadSettings) =>
     method: "PUT",
     body: JSON.stringify(settings),
   });
+
+export interface SpotdlOptions {
+  output_format: "mp3" | "flac" | "ogg" | "opus" | "m4a" | null;
+  bitrate: string | null;
+  threads: number | null;
+  extra_args: string;
+  client_id: string;
+  client_secret: string;
+}
+
+export interface SpotifyArtist {
+  id: string;
+  name: string;
+  url: string;
+  image: string | null;
+  followers: number | null;
+}
+
+export const getSpotdlOptions = () => api<SpotdlOptions>("/settings/spotdl");
+
+export const updateSpotdlOptions = (options: SpotdlOptions) =>
+  api<SpotdlOptions>("/settings/spotdl", { method: "PUT", body: JSON.stringify(options) });
+
+export const searchSpotifyArtists = (q: string) =>
+  api<SpotifyArtist[]>(`/downloads/spotify/search?q=${encodeURIComponent(q)}`);
+
+export const getDownloadLog = () => api<{ lines: string[] }>("/downloads/log");

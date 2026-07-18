@@ -94,12 +94,17 @@ def test_run_conflict_when_already_running(
         running = True
         current_watch = "Something"
         last_finished_at = None
+        log_lines = ["=== Something (query)"]
 
         def start(self) -> bool:
             return False
 
     monkeypatch.setattr(downloads_service, "download_manager", BusyManager())
     assert client.post(RUN_URL, headers=admin_headers).status_code == 409
+
+    log = client.get("/api/v1/downloads/log", headers=admin_headers)
+    assert log.status_code == 200
+    assert log.json()["lines"] == ["=== Something (query)"]
 
 
 def test_manager_runs_enabled_watches_and_triggers_scan(tmp_path: Path) -> None:
@@ -127,7 +132,7 @@ def test_manager_runs_enabled_watches_and_triggers_scan(tmp_path: Path) -> None:
     calls: list[tuple[str, str]] = []
     scans: list[bool] = []
 
-    def fake_runner(query: str, output_dir: Path) -> tuple[bool, str]:
+    def fake_runner(query: str, output_dir: Path, _options: dict) -> tuple[bool, str]:
         calls.append((query, str(output_dir)))
         return (query == "good-query", "boom output")
 
@@ -147,6 +152,8 @@ def test_manager_runs_enabled_watches_and_triggers_scan(tmp_path: Path) -> None:
     assert all(directory == str(music_dir) for _q, directory in calls)
     assert scans == [True]
     assert manager.last_finished_at is not None
+    assert any("boom output" in line for line in manager.log_lines)
+    assert any("Bad" in line and "FAILED" in line for line in manager.log_lines)
 
     with session_factory() as db:
         good = db.scalar(select(DownloadWatch).where(DownloadWatch.name == "Good"))
@@ -179,6 +186,69 @@ def test_download_settings_roundtrip(
         SETTINGS_URL, json={"check_interval_hours": 0}, headers=admin_headers
     )
     assert disabled.status_code == 200
+
+
+def test_spotdl_options_roundtrip(client: TestClient, admin_headers: dict[str, str]) -> None:
+    defaults = client.get("/api/v1/settings/spotdl", headers=admin_headers).json()
+    assert defaults["output_format"] is None
+    assert defaults["client_id"] == ""
+
+    response = client.put(
+        "/api/v1/settings/spotdl",
+        json={
+            "output_format": "mp3",
+            "bitrate": "320k",
+            "threads": 4,
+            "extra_args": "--sponsor-block",
+            "client_id": "abc",
+            "client_secret": "def",
+        },
+        headers=admin_headers,
+    )
+    assert response.status_code == 200
+    stored = client.get("/api/v1/settings/spotdl", headers=admin_headers).json()
+    assert stored["output_format"] == "mp3"
+    assert stored["threads"] == 4
+    assert stored["client_id"] == "abc"
+
+
+def test_spotify_search_without_credentials(
+    client: TestClient, admin_headers: dict[str, str]
+) -> None:
+    response = client.get(
+        "/api/v1/downloads/spotify/search?q=daft", headers=admin_headers
+    )
+    assert response.status_code == 400
+    assert "credentials" in response.json()["detail"].lower()
+
+
+def test_spotify_search_with_credentials(
+    client: TestClient, admin_headers: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client.put(
+        "/api/v1/settings/spotdl",
+        json={"client_id": "abc", "client_secret": "def"},
+        headers=admin_headers,
+    )
+
+    def fake_search(client_id: str, client_secret: str, query: str, limit: int = 10):
+        assert (client_id, client_secret) == ("abc", "def")
+        return [
+            {
+                "id": "1",
+                "name": f"Result for {query}",
+                "url": "https://open.spotify.com/artist/1",
+                "image": None,
+                "followers": 1000,
+            }
+        ]
+
+    monkeypatch.setattr("app.services.spotify.search_artists", fake_search)
+    response = client.get(
+        "/api/v1/downloads/spotify/search?q=daft", headers=admin_headers
+    )
+    assert response.status_code == 200
+    assert response.json()[0]["name"] == "Result for daft"
 
 
 @pytest.fixture(autouse=True)

@@ -30,6 +30,8 @@ def create_user(payload: AdminUserCreate, db: DbDep, _admin: AdminUserDep) -> Us
             password=payload.password,
             email=payload.email,
             role=payload.role,
+            first_name=payload.first_name,
+            last_name=payload.last_name,
         )
     except DuplicateUserError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None

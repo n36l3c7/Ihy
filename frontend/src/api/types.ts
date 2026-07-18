@@ -7,6 +7,8 @@ export interface TokenPair {
 export interface User {
   id: number;
   username: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string | null;
   role: "admin" | "user";
   is_active: boolean;

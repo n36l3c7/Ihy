@@ -20,13 +20,21 @@ def test_list_users_requires_auth(client: TestClient) -> None:
 def test_admin_creates_and_lists_users(client: TestClient, admin_headers: dict[str, str]) -> None:
     created = client.post(
         USERS_URL,
-        json={"username": "newuser", "password": "new-password", "email": "new@example.com"},
+        json={
+            "username": "newuser",
+            "password": "new-password",
+            "email": "new@example.com",
+            "first_name": "New",
+            "last_name": "User",
+        },
         headers=admin_headers,
     )
     assert created.status_code == 201
     body = created.json()
     assert body["username"] == "newuser"
     assert body["role"] == "user"
+    assert body["first_name"] == "New"
+    assert body["last_name"] == "User"
 
     listed = client.get(USERS_URL, headers=admin_headers)
     assert listed.status_code == 200
@@ -55,12 +63,13 @@ def test_admin_updates_user(
 
     response = client.patch(
         f"{USERS_URL}/{target.id}",
-        json={"role": "admin", "email": "target@example.com"},
+        json={"role": "admin", "email": "target@example.com", "first_name": "Tar"},
         headers=admin_headers,
     )
     assert response.status_code == 200
     assert response.json()["role"] == "admin"
     assert response.json()["email"] == "target@example.com"
+    assert response.json()["first_name"] == "Tar"
 
 
 def test_update_password_allows_new_login(

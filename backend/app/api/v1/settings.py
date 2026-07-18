@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.deps import AdminUserDep, DbDep
-from app.schemas.downloads import DownloadSettings
+from app.schemas.downloads import DownloadSettings, SpotdlOptions
 from app.schemas.settings import LibrarySettings
 from app.services import app_settings
 from app.workers.scheduler import reschedule_download_job
@@ -35,3 +35,16 @@ def update_download_settings(
     app_settings.set_download_interval_hours(db, payload.check_interval_hours)
     reschedule_download_job()
     return DownloadSettings(check_interval_hours=app_settings.get_download_interval_hours(db))
+
+
+@router.get("/spotdl", response_model=SpotdlOptions)
+def get_spotdl_options(db: DbDep, _admin: AdminUserDep) -> SpotdlOptions:
+    return SpotdlOptions(**app_settings.get_spotdl_options(db))
+
+
+@router.put("/spotdl", response_model=SpotdlOptions)
+def update_spotdl_options(
+    payload: SpotdlOptions, db: DbDep, _admin: AdminUserDep
+) -> SpotdlOptions:
+    app_settings.set_spotdl_options(db, payload.model_dump())
+    return SpotdlOptions(**app_settings.get_spotdl_options(db))

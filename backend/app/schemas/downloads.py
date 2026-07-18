@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -39,3 +40,24 @@ class DownloadStatusRead(BaseModel):
 
 class DownloadSettings(BaseModel):
     check_interval_hours: int = Field(ge=0, le=720)
+
+
+class SpotdlOptions(BaseModel):
+    output_format: Literal["mp3", "flac", "ogg", "opus", "m4a"] | None = None
+    bitrate: str | None = Field(default=None, max_length=10)  # e.g. "320k" or "disable"
+    threads: int | None = Field(default=None, ge=1, le=16)
+    extra_args: str = Field(default="", max_length=500)
+    client_id: str = Field(default="", max_length=100)
+    client_secret: str = Field(default="", max_length=100)
+
+
+class SpotifyArtistRead(BaseModel):
+    id: str
+    name: str
+    url: str
+    image: str | None = None
+    followers: int | None = None
+
+
+class DownloadLogRead(BaseModel):
+    lines: list[str]
