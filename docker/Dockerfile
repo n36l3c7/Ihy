@@ -2,7 +2,12 @@
 FROM node:24-alpine AS frontend-build
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+# Retries harden the install against transient DNS/network hiccups
+# (Alpine's musl resolver occasionally drops a lookup mid-install)
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 5000 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm ci
 COPY frontend/ ./
 RUN npm run build
 

@@ -19,7 +19,6 @@ services:
       IHY_SSL_SAN: "${IHY_SSL_SAN:-}"
     volumes:
       - ihy-data:/data
-      - C:/Users/ASUS/Music:/music
       # Mount your music library here. Remote sources (SMB/NFS) should be
       # mounted on the host first, then passed through like any local path.
       # - /path/to/your/music:/music
