@@ -1,7 +1,8 @@
 /* Ihy service worker: app-shell caching, offline library browsing and
  * offline audio playback (tracks saved by the in-app download manager). */
 
-const STATIC_CACHE = "ihy-static-v1";
+// Bump the static cache version when immutable assets (icons) change
+const STATIC_CACHE = "ihy-static-v2";
 const API_CACHE = "ihy-api-v1";
 const AUDIO_CACHE = "ihy-offline-audio-v1";
 const KEEP = [STATIC_CACHE, API_CACHE, AUDIO_CACHE];
