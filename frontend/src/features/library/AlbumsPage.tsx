@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router";
 import { deleteAlbum, getAlbum, getAlbums } from "../../api/catalog";
 import type { Album } from "../../api/types";
 import { addTrackToPlaylist, getPlaylists } from "../../api/userLibrary";
+import { CardPlayButton } from "../../components/CardPlayButton";
 import { ContextMenu, contextMenuItemClass } from "../../components/ContextMenu";
 import { CoverImage } from "../../components/CoverImage";
 import { Pagination } from "../../components/Pagination";
@@ -94,7 +95,10 @@ export function AlbumsPage() {
               onContextMenu={(event) => openMenu(event, album)}
               className="group rounded-lg p-3 transition-colors hover:bg-zinc-900"
             >
-              <CoverImage albumId={album.id} className="aspect-square w-full rounded-md" />
+              <div className="relative">
+                <CoverImage albumId={album.id} className="aspect-square w-full rounded-md" />
+                <CardPlayButton onPlay={() => void playAlbum(album)} />
+              </div>
               <p className="mt-3 truncate text-sm font-medium text-zinc-100">{album.title}</p>
               <p className="truncate text-xs text-zinc-500">
                 {album.artist?.name ?? "Unknown artist"}

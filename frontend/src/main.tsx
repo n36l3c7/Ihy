@@ -4,7 +4,10 @@ import { createRoot } from "react-dom/client";
 
 import App from "./App";
 import { queryClient } from "./lib/queryClient";
+import { initTheme } from "./lib/theme";
 import "./index.css";
+
+initTheme();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

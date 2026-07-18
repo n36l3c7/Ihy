@@ -3,12 +3,15 @@ import { ImagePlus, Play, Trash2 } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 
-import { deleteArtist, getArtist, getTracks } from "../../api/catalog";
+import { deleteArtist, getAlbum, getArtist, getTracks } from "../../api/catalog";
 import { uploadArtistImage } from "../../api/tags";
 import { ArtistImage } from "../../components/ArtistImage";
+import { CardPlayButton } from "../../components/CardPlayButton";
 import { CoverImage } from "../../components/CoverImage";
+import { GradientHeader } from "../../components/GradientHeader";
 import { Pagination } from "../../components/Pagination";
 import { PageSpinner } from "../../components/Spinner";
+import { artistImageUrl } from "../../lib/mediaUrls";
 import { useAuthStore } from "../../stores/authStore";
 import { usePlayerStore } from "../../stores/playerStore";
 import { TrackList } from "./TrackList";
@@ -70,7 +73,23 @@ export function ArtistDetailPage() {
 
   return (
     <div>
-      <div className="mb-8 flex items-end gap-6">
+      <GradientHeader
+        imageUrl={artistImageUrl(artist.id)}
+        stickyBar={
+          <>
+            <button
+              type="button"
+              onClick={() => void handlePlayAll()}
+              className="rounded-full bg-emerald-500 p-2 text-zinc-950 transition-transform hover:scale-105"
+              aria-label="Play all"
+            >
+              <Play className="h-4 w-4 fill-current" />
+            </button>
+            <span className="truncate text-sm font-semibold text-zinc-100">{artist.name}</span>
+          </>
+        }
+      >
+      <div className="flex items-end gap-6">
         <div className="group relative shrink-0">
           <ArtistImage
             artistId={artist.id}
@@ -142,6 +161,7 @@ export function ArtistDetailPage() {
           </button>
         </div>
       </div>
+      </GradientHeader>
 
       <div className="mb-10">
         <div className="mb-4 flex items-center justify-between gap-4">
@@ -192,7 +212,14 @@ export function ArtistDetailPage() {
               to={`/albums/${album.id}`}
               className="group rounded-lg p-3 transition-colors hover:bg-zinc-900"
             >
-              <CoverImage albumId={album.id} className="aspect-square w-full rounded-md" />
+              <div className="relative">
+                <CoverImage albumId={album.id} className="aspect-square w-full rounded-md" />
+                <CardPlayButton
+                  onPlay={() => {
+                    void getAlbum(album.id).then((detail) => playQueue(detail.tracks));
+                  }}
+                />
+              </div>
               <p className="mt-3 truncate text-sm font-medium text-zinc-100">{album.title}</p>
               <p className="text-xs text-zinc-500">
                 {album.year ? `${album.year} · ` : ""}

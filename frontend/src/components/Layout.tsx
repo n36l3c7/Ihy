@@ -10,6 +10,7 @@ import {
   LogOut,
   Mic2,
   Music2,
+  Palette,
   Play,
   Plus,
   Settings,
@@ -25,6 +26,7 @@ import { PlayerBar } from "../features/player/PlayerBar";
 import { QueuePanel } from "../features/player/QueuePanel";
 import { initPlayerSync } from "../lib/playerSync";
 import { initSessionPersistence, restoreSession } from "../lib/session";
+import { applyTheme, currentTheme, THEMES } from "../lib/theme";
 import { useAuthStore } from "../stores/authStore";
 import { usePlayerStore } from "../stores/playerStore";
 import { ContextMenu, contextMenuItemClass } from "./ContextMenu";
@@ -58,6 +60,8 @@ export function Layout() {
   const playQueue = usePlayerStore((state) => state.playQueue);
   const queueOpen = usePlayerStore((state) => state.queueOpen);
   const [menu, setMenu] = useState<{ x: number; y: number; playlist: Playlist } | null>(null);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const [theme, setTheme] = useState(currentTheme);
 
   const playlists = useQuery({ queryKey: ["playlists"], queryFn: getPlaylists });
 
@@ -149,16 +153,49 @@ export function Layout() {
               </NavLink>
             )}
           </nav>
-          <div className="mt-auto flex items-center justify-between px-3 pt-4">
+          <div className="relative mt-auto flex items-center justify-between px-3 pt-4">
             <span className="truncate text-sm text-zinc-400">{user?.username}</span>
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded-full p-2 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
-              aria-label="Log out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={() => setThemeOpen((open) => !open)}
+                className="rounded-full p-2 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                aria-label="Theme"
+              >
+                <Palette className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={logout}
+                className="rounded-full p-2 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                aria-label="Log out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+            {themeOpen && (
+              <div className="absolute bottom-full right-0 z-30 mb-2 w-44 rounded-md border border-zinc-800 bg-zinc-900 py-1 shadow-2xl">
+                {THEMES.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    onClick={() => {
+                      applyTheme(entry.id);
+                      setTheme(entry.id);
+                      setThemeOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-zinc-200 transition-colors hover:bg-zinc-800"
+                  >
+                    <span
+                      className="h-3 w-3 rounded-full"
+                      style={{ backgroundColor: entry.swatch }}
+                    />
+                    {entry.label}
+                    {theme === entry.id && <span className="ml-auto text-emerald-500">●</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </aside>
         <main className="min-h-0 flex-1 overflow-y-auto px-8 py-6">

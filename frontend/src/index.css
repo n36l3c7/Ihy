@@ -1,5 +1,40 @@
 @import "tailwindcss";
 
+/* Themes: remap the accent (emerald) and base (zinc) color variables.
+   Components keep using the same utility classes and follow along. */
+:root[data-theme="violet"] {
+  --color-emerald-400: var(--color-violet-400);
+  --color-emerald-500: var(--color-violet-500);
+  --color-emerald-600: var(--color-violet-600);
+}
+
+:root[data-theme="blue"] {
+  --color-emerald-400: var(--color-blue-400);
+  --color-emerald-500: var(--color-blue-500);
+  --color-emerald-600: var(--color-blue-600);
+}
+
+:root[data-theme="rose"] {
+  --color-emerald-400: var(--color-rose-400);
+  --color-emerald-500: var(--color-rose-500);
+  --color-emerald-600: var(--color-rose-600);
+}
+
+:root[data-theme="amber"] {
+  --color-emerald-400: var(--color-amber-400);
+  --color-emerald-500: var(--color-amber-500);
+  --color-emerald-600: var(--color-amber-600);
+}
+
+:root[data-theme="monochrome"] {
+  --color-emerald-400: #e4e4e7;
+  --color-emerald-500: #fafafa;
+  --color-emerald-600: #a1a1aa;
+  --color-zinc-950: #000000;
+  --color-zinc-900: #0b0b0c;
+  --color-zinc-800: #19191c;
+}
+
 html,
 body,
 #root {

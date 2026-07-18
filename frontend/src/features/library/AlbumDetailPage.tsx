@@ -6,8 +6,10 @@ import { Link, useNavigate, useParams } from "react-router";
 import { deleteAlbum, getAlbum } from "../../api/catalog";
 import { uploadAlbumCover } from "../../api/tags";
 import { CoverImage } from "../../components/CoverImage";
+import { GradientHeader } from "../../components/GradientHeader";
 import { PageSpinner } from "../../components/Spinner";
 import { formatTotalDuration } from "../../lib/format";
+import { albumCoverUrl } from "../../lib/mediaUrls";
 import { useAuthStore } from "../../stores/authStore";
 import { usePlayerStore } from "../../stores/playerStore";
 import { AlbumTracksEditor } from "../tag-editor/AlbumTracksEditor";
@@ -77,7 +79,23 @@ export function AlbumDetailPage() {
           onClose={() => setTracksEditorOpen(false)}
         />
       )}
-      <div className="mb-8 flex items-end gap-6">
+      <GradientHeader
+        imageUrl={albumCoverUrl(album.id)}
+        stickyBar={
+          <>
+            <button
+              type="button"
+              onClick={() => playQueue(album.tracks)}
+              className="rounded-full bg-emerald-500 p-2 text-zinc-950 transition-transform hover:scale-105"
+              aria-label="Play album"
+            >
+              <Play className="h-4 w-4 fill-current" />
+            </button>
+            <span className="truncate text-sm font-semibold text-zinc-100">{album.title}</span>
+          </>
+        }
+      >
+      <div className="flex items-end gap-6">
         <div className="group relative shrink-0">
           <CoverImage
             albumId={album.id}
@@ -178,6 +196,7 @@ export function AlbumDetailPage() {
           </button>
         </div>
       </div>
+      </GradientHeader>
 
       <TrackList tracks={album.tracks} showAlbum={false} showCover={false} showNumbers />
     </div>
