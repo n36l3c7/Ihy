@@ -52,6 +52,7 @@ export interface Track {
   track_number: number | null;
   disc_number: number | null;
   year: number | null;
+  replay_gain: number | null;
   artists: ArtistBrief[];
   album: AlbumBrief | null;
   genres: Genre[];

@@ -108,6 +108,9 @@ class Track(TimestampMixin, Base):
     disc_number: Mapped[int | None]
     year: Mapped[int | None]
     has_embedded_cover: Mapped[bool] = mapped_column(default=False)
+    # Track gain in dB relative to the loudness target (ReplayGain 2.0,
+    # -18 LUFS reference); read from tags or computed by the loudness job
+    replay_gain: Mapped[float | None]
 
     source: Mapped["Source"] = relationship(back_populates="tracks")
     artists: Mapped[list["Artist"]] = relationship(

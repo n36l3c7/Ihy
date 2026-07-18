@@ -238,6 +238,8 @@ def _apply_info(
     track.disc_number = info.disc_number
     track.year = info.year
     track.has_embedded_cover = info.has_embedded_cover
+    if info.replay_gain is not None:
+        track.replay_gain = info.replay_gain
 
     artist_names = split_tag_values(info.artists, separators)
     artists = [a for a in (cache.artist(name) for name in artist_names) if a is not None]

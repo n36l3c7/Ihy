@@ -100,7 +100,7 @@ export function NowPlayingView({
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 items-center justify-center gap-12 px-8 pb-4">
+      <div className="flex min-h-0 flex-1 items-center justify-center gap-8 px-4 pb-4 sm:px-8 lg:gap-12">
         <div className="flex max-w-md flex-col items-center gap-6">
           <CoverImage
             albumId={track.album?.id}
@@ -148,7 +148,7 @@ export function NowPlayingView({
         )}
       </div>
 
-      <div className="mx-auto w-full max-w-2xl px-8 pb-10">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-8 sm:px-8 sm:pb-10">
         <div className="flex items-center gap-2 text-xs tabular-nums text-zinc-400">
           <span className="w-10 text-right">{formatDuration(currentTime)}</span>
           <input

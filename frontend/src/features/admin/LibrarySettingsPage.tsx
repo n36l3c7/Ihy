@@ -2,7 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, X } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 
-import { getLibrarySettings, startScan, updateLibrarySettings } from "../../api/admin";
+import {
+  getLibrarySettings,
+  getLoudnessStatus,
+  startLoudnessAnalysis,
+  startScan,
+  updateLibrarySettings,
+} from "../../api/admin";
 import { PageSpinner } from "../../components/Spinner";
 import { buttonClass, inputClass } from "../auth/LoginPage";
 
@@ -32,6 +38,17 @@ export function LibrarySettingsPage() {
   const rescanMutation = useMutation({
     mutationFn: () => startScan(true),
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["scan-status"] }),
+  });
+
+  const loudness = useQuery({
+    queryKey: ["loudness-status"],
+    queryFn: getLoudnessStatus,
+    refetchInterval: (query) => (query.state.data?.running ? 2000 : false),
+  });
+
+  const loudnessMutation = useMutation({
+    mutationFn: startLoudnessAnalysis,
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: ["loudness-status"] }),
   });
 
   if (query.isPending || separators === null) return <PageSpinner />;
@@ -130,6 +147,45 @@ export function LibrarySettingsPage() {
           A normal scan skips unchanged files, so after changing separators run a full
           rescan to re-split the existing library.
         </p>
+      </div>
+
+      <div className="mt-6 rounded-lg border border-zinc-800 p-4">
+        <p className="text-sm font-medium text-zinc-300">Volume normalization</p>
+        <p className="mt-1 text-xs text-zinc-500">
+          The scanner reads ReplayGain tags when present. For untagged files this
+          analysis measures loudness with ffmpeg (EBU R128, -18 LUFS reference) and
+          stores the gain, so the player&apos;s &quot;Normalize volume&quot; option can
+          even out quiet and loud tracks.
+        </p>
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => loudnessMutation.mutate()}
+            disabled={loudnessMutation.isPending || loudness.data?.running === true}
+            className={`${buttonClass} w-auto px-6`}
+          >
+            {loudness.data?.running ? "Analyzing..." : "Analyze missing tracks"}
+          </button>
+          {loudness.data?.running && (
+            <span className="text-sm text-zinc-400">
+              {loudness.data.done}/{loudness.data.total}
+              {loudness.data.failed > 0 && ` (${loudness.data.failed} failed)`}
+            </span>
+          )}
+          {loudness.data && !loudness.data.running && loudness.data.total > 0 && (
+            <span className="text-sm text-emerald-500">
+              Done: {loudness.data.done - loudness.data.failed}/{loudness.data.total} measured.
+            </span>
+          )}
+          {loudness.data?.error && (
+            <span className="text-sm text-red-400">{loudness.data.error}</span>
+          )}
+        </div>
+        {loudness.data && !loudness.data.ffmpeg_available && (
+          <p className="mt-2 text-xs text-amber-400">
+            ffmpeg was not found on the server — only ReplayGain tags will be used.
+          </p>
+        )}
       </div>
     </div>
   );

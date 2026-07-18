@@ -11,6 +11,7 @@ from app.schemas.library import TrackRead
 from app.schemas.scan import ScanResultRead, ScanStatusRead
 from app.services import browse as browse_service
 from app.services.browse import InvalidBrowsePathError
+from app.services.loudness import ffmpeg_available, loudness_analyzer
 from app.services.scan_manager import scan_manager
 
 router = APIRouter()
@@ -76,3 +77,38 @@ def start_scan(_admin: AdminUserDep, full: bool = False) -> ScanStatusRead:
             status_code=status.HTTP_409_CONFLICT, detail="A scan is already running"
         )
     return _current_status()
+
+
+class LoudnessStatusRead(BaseModel):
+    running: bool
+    done: int
+    total: int
+    failed: int
+    error: str | None
+    ffmpeg_available: bool
+
+
+def _loudness_status() -> LoudnessStatusRead:
+    return LoudnessStatusRead(
+        running=loudness_analyzer.running,
+        done=loudness_analyzer.done,
+        total=loudness_analyzer.total,
+        failed=loudness_analyzer.failed,
+        error=loudness_analyzer.error,
+        ffmpeg_available=ffmpeg_available(),
+    )
+
+
+@router.get("/loudness", response_model=LoudnessStatusRead)
+def loudness_status(_admin: AdminUserDep) -> LoudnessStatusRead:
+    return _loudness_status()
+
+
+@router.post("/loudness", response_model=LoudnessStatusRead, status_code=status.HTTP_202_ACCEPTED)
+def start_loudness_analysis(_admin: AdminUserDep) -> LoudnessStatusRead:
+    """Measure ReplayGain (via ffmpeg EBU R128) for tracks that lack it."""
+    if not loudness_analyzer.start():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="An analysis is already running"
+        )
+    return _loudness_status()

@@ -68,7 +68,7 @@ export function QueuePanel() {
   });
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-zinc-800 bg-zinc-900/40">
+    <aside className="fixed inset-0 z-40 flex w-full shrink-0 flex-col border-zinc-800 bg-zinc-900 md:static md:z-auto md:w-80 md:border-l md:bg-zinc-900/40">
       <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
         <p className="text-sm font-semibold text-zinc-100">Queue</p>
         <div className="flex items-center gap-1">
@@ -94,6 +94,14 @@ export function QueuePanel() {
               Save as...
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => usePlayerStore.getState().toggleQueueOpen()}
+            className="rounded-full p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100 md:hidden"
+            aria-label="Close queue"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       </div>
 

@@ -37,6 +37,11 @@ export interface ArtistInfoData {
 
 export const getArtistInfo = (id: number) => api<ArtistInfoData>(`/artists/${id}/info`);
 
+export const getRadioTracks = (seedTrackId: number, excludeIds: number[]) =>
+  api<Track[]>(
+    `/tracks/${seedTrackId}/radio${qs({ limit: 20, exclude: excludeIds.slice(0, 500).join(",") })}`,
+  );
+
 export const getAlbums = (params: {
   q?: string;
   artist_id?: number;

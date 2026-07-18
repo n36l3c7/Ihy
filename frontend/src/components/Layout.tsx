@@ -8,6 +8,7 @@ import {
   Heart,
   History,
   House,
+  Library,
   ListMusic,
   LogOut,
   Mic2,
@@ -15,6 +16,7 @@ import {
   Palette,
   Play,
   Plus,
+  Search,
   Settings,
   Tags,
   Trash2,
@@ -171,7 +173,7 @@ export function Layout() {
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
       <div className="flex min-h-0 flex-1">
-        <aside className="flex w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/40 p-4">
+        <aside className="hidden w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/40 p-4 md:flex">
           <div className="mb-6 flex items-center gap-2 px-3">
             <ListMusic className="h-6 w-6 text-emerald-500" />
             <span className="text-xl font-bold tracking-tight">Ihy</span>
@@ -294,12 +296,40 @@ export function Layout() {
             )}
           </div>
         </aside>
-        <main className="min-h-0 flex-1 overflow-y-auto px-8 py-6">
+        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-8 md:py-6">
           <Outlet />
         </main>
         {queueOpen && <QueuePanel />}
       </div>
       <PlayerBar />
+      <nav className="flex items-stretch justify-around border-t border-zinc-800 bg-zinc-900 md:hidden">
+        {[
+          { to: "/home", label: "Home", icon: House },
+          { to: "/explore", label: "Explore", icon: Compass },
+          { to: "/library", label: "Library", icon: Library },
+        ].map(({ to, label, icon: Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              `flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
+                isActive ? "text-emerald-500" : "text-zinc-400"
+              }`
+            }
+          >
+            <Icon className="h-5 w-5" />
+            {label}
+          </NavLink>
+        ))}
+        <button
+          type="button"
+          onClick={() => setPaletteOpen(true)}
+          className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-zinc-400"
+        >
+          <Search className="h-5 w-5" />
+          Search
+        </button>
+      </nav>
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)}>

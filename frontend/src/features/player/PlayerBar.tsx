@@ -29,6 +29,7 @@ import { usePlayerAudio } from "./usePlayerAudio";
 
 const SLEEP_OPTIONS = [15, 30, 45, 60, 90];
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const CROSSFADE_OPTIONS = [0, 3, 6, 9, 12];
 
 /** Tiny upward dropdown for the player bar. */
 function BarMenu({
@@ -99,6 +100,12 @@ export function PlayerBar() {
   const setStopAfterTrack = usePlayerStore((state) => state.setStopAfterTrack);
   const queueOpen = usePlayerStore((state) => state.queueOpen);
   const toggleQueueOpen = usePlayerStore((state) => state.toggleQueueOpen);
+  const crossfadeSeconds = usePlayerStore((state) => state.crossfadeSeconds);
+  const setCrossfadeSeconds = usePlayerStore((state) => state.setCrossfadeSeconds);
+  const normalizeVolume = usePlayerStore((state) => state.normalizeVolume);
+  const setNormalizeVolume = usePlayerStore((state) => state.setNormalizeVolume);
+  const autoplayRadio = usePlayerStore((state) => state.autoplayRadio);
+  const setAutoplayRadio = usePlayerStore((state) => state.setAutoplayRadio);
   const { currentTime, duration, seek, restartOrPrevious } = usePlayerAudio();
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [eqOpen, setEqOpen] = useState(false);
@@ -127,7 +134,13 @@ export function PlayerBar() {
     }`;
 
   return (
-    <footer className="border-t border-zinc-800 bg-zinc-900 px-4 py-3">
+    <footer className="relative border-t border-zinc-800 bg-zinc-900 px-4 py-3">
+      <div className="absolute inset-x-0 top-0 h-0.5 bg-zinc-800 md:hidden">
+        <div
+          className="h-full bg-emerald-500"
+          style={{ width: `${duration ? Math.min(100, (currentTime / duration) * 100) : 0}%` }}
+        />
+      </div>
       {syncRole === "remote" && (
         <div className="mb-2 flex items-center justify-center gap-3 rounded-md bg-emerald-600/10 py-1 text-xs text-emerald-400">
           Playing in another tab — this tab is a remote control
@@ -141,7 +154,7 @@ export function PlayerBar() {
         </div>
       )}
       <div className="flex items-center gap-4">
-        <div className="flex w-64 min-w-0 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3 md:w-64 md:flex-none">
           <button
             type="button"
             onClick={() => setNowPlayingOpen(true)}
@@ -151,7 +164,15 @@ export function PlayerBar() {
           >
             <CoverImage albumId={track.album?.id} className="h-12 w-12 rounded" />
           </button>
-          <div className="min-w-0">
+          <div
+            className="min-w-0 flex-1 md:flex-none"
+            onClick={(event) => {
+              // On mobile the whole label opens Now Playing (artist links excluded)
+              if (window.innerWidth < 768 && (event.target as HTMLElement).tagName !== "A") {
+                setNowPlayingOpen(true);
+              }
+            }}
+          >
             <p className="truncate text-sm font-medium text-zinc-100">{track.title}</p>
             <p className="truncate text-xs text-zinc-400">
               {track.artists.length > 0
@@ -169,10 +190,34 @@ export function PlayerBar() {
                 : "Unknown artist"}
             </p>
           </div>
-          <FavoriteButton trackId={track.id} />
+          <span className="hidden md:block">
+            <FavoriteButton trackId={track.id} />
+          </span>
+          <div className="flex shrink-0 items-center gap-1 md:hidden">
+            <button
+              type="button"
+              onClick={togglePlay}
+              className="rounded-full bg-zinc-100 p-2 text-zinc-900"
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? (
+                <Pause className="h-5 w-5" />
+              ) : (
+                <Play className="h-5 w-5 translate-x-px" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => next()}
+              className="rounded-full p-2 text-zinc-300"
+              aria-label="Next track"
+            >
+              <SkipForward className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
+        <div className="hidden min-w-0 flex-1 flex-col items-center gap-1 md:flex">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -235,14 +280,17 @@ export function PlayerBar() {
           </div>
         </div>
 
-        <div className="flex w-64 items-center justify-end gap-1 text-zinc-400">
+        <div className="hidden w-64 items-center justify-end gap-1 text-zinc-400 md:flex">
           <BarMenu
             trigger={<span className="text-xs font-semibold tabular-nums">{playbackRate}x</span>}
-            ariaLabel="Playback speed"
-            active={playbackRate !== 1}
+            ariaLabel="Playback settings"
+            active={playbackRate !== 1 || crossfadeSeconds > 0 || normalizeVolume || autoplayRadio}
           >
             {(close) => (
               <>
+                <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Speed
+                </p>
                 {SPEED_OPTIONS.map((speed) => (
                   <button
                     key={speed}
@@ -256,6 +304,38 @@ export function PlayerBar() {
                     {speed}x{speed === playbackRate && <span className="text-emerald-500">●</span>}
                   </button>
                 ))}
+                <p className="border-t border-zinc-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Crossfade
+                </p>
+                {CROSSFADE_OPTIONS.map((seconds) => (
+                  <button
+                    key={seconds}
+                    type="button"
+                    className={barMenuItemClass}
+                    onClick={() => setCrossfadeSeconds(seconds)}
+                  >
+                    {seconds === 0 ? "Off (gapless)" : `${seconds} seconds`}
+                    {seconds === crossfadeSeconds && <span className="text-emerald-500">●</span>}
+                  </button>
+                ))}
+                <div className="border-t border-zinc-800">
+                  <button
+                    type="button"
+                    className={barMenuItemClass}
+                    onClick={() => setNormalizeVolume(!normalizeVolume)}
+                  >
+                    Normalize volume
+                    {normalizeVolume && <span className="text-emerald-500">●</span>}
+                  </button>
+                  <button
+                    type="button"
+                    className={barMenuItemClass}
+                    onClick={() => setAutoplayRadio(!autoplayRadio)}
+                  >
+                    Autoplay similar
+                    {autoplayRadio && <span className="text-emerald-500">●</span>}
+                  </button>
+                </div>
               </>
             )}
           </BarMenu>

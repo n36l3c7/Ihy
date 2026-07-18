@@ -13,6 +13,20 @@ export const getScanStatus = () => api<ScanStatus>("/library/scan");
 export const startScan = (full = false) =>
   api<ScanStatus>(`/library/scan${full ? "?full=true" : ""}`, { method: "POST" });
 
+export interface LoudnessStatus {
+  running: boolean;
+  done: number;
+  total: number;
+  failed: number;
+  error: string | null;
+  ffmpeg_available: boolean;
+}
+
+export const getLoudnessStatus = () => api<LoudnessStatus>("/library/loudness");
+
+export const startLoudnessAnalysis = () =>
+  api<LoudnessStatus>("/library/loudness", { method: "POST" });
+
 export interface UserCreatePayload {
   username: string;
   password: string;

@@ -60,6 +60,29 @@ def list_tracks(
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
+@router.get("/{track_id}/radio", response_model=list[TrackRead])
+def track_radio(
+    track_id: int,
+    db: DbDep,
+    _user: CurrentUserDep,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    exclude: Annotated[str | None, Query(max_length=10000)] = None,
+) -> list:
+    """Random tracks similar to this one, for autoplay when the queue ends."""
+    track = catalog.get_track(db, track_id)
+    if track is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+    exclude_ids: set[int] = set()
+    if exclude:
+        try:
+            exclude_ids = {int(part) for part in exclude.split(",") if part.strip()}
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="exclude must be integers"
+            ) from None
+    return catalog.radio_tracks(db, track, limit=limit, exclude_ids=exclude_ids)
+
+
 @router.post("/tags/batch", response_model=BatchTagsResult)
 def batch_edit_tags(payload: BatchTagsRequest, db: DbDep, _admin: AdminUserDep) -> BatchTagsResult:
     """Apply the same tag changes to many tracks. Errors are reported per file."""

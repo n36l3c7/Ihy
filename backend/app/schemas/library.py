@@ -38,6 +38,7 @@ class TrackRead(BaseModel):
     track_number: int | None
     disc_number: int | None
     year: int | None
+    replay_gain: float | None = None
     artists: list[ArtistBrief]
     album: AlbumBrief | None
     genres: list[GenreRead]

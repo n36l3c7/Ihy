@@ -27,6 +27,7 @@ import { FoldersPage } from "./features/library/FoldersPage";
 import { HomePage } from "./features/library/HomePage";
 import { GenresPage } from "./features/library/GenresPage";
 import { HistoryPage } from "./features/library/HistoryPage";
+import { LibraryHubPage } from "./features/library/LibraryHubPage";
 import { StatsPage } from "./features/library/StatsPage";
 import { TracksPage } from "./features/library/TracksPage";
 import { PlaylistPage } from "./features/playlists/PlaylistPage";
@@ -62,6 +63,7 @@ const router = createBrowserRouter([
           { index: true, element: <Navigate to="/home" replace /> },
           { path: "/home", element: <HomePage /> },
           { path: "/explore", element: <ExplorePage /> },
+          { path: "/library", element: <LibraryHubPage /> },
           { path: "/tracks", element: <TracksPage /> },
           { path: "/artists", element: <ArtistsPage /> },
           { path: "/artists/:artistId", element: <ArtistDetailPage /> },

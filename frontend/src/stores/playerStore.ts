@@ -46,6 +46,9 @@ interface PlayerState {
   lastKnownTime: number; // most recent playback position, for saving queues
   syncRole: SyncRole;
   remoteSeekRequest: number | null; // seek requested by a remote tab
+  crossfadeSeconds: number; // 0 = gapless switch, no fade
+  normalizeVolume: boolean; // apply per-track ReplayGain when available
+  autoplayRadio: boolean; // keep playing similar tracks when the queue ends
   playQueue: (tracks: Track[], startIndex?: number) => void;
   togglePlay: () => void;
   setPlaying: (playing: boolean) => void;
@@ -62,6 +65,9 @@ interface PlayerState {
   setPendingSeekSeconds: (seconds: number | null) => void;
   setLastKnownTime: (seconds: number) => void;
   setSyncRole: (role: SyncRole) => void;
+  setCrossfadeSeconds: (seconds: number) => void;
+  setNormalizeVolume: (enabled: boolean) => void;
+  setAutoplayRadio: (enabled: boolean) => void;
   applyRemoteState: (state: RemoteState) => void;
   takeOver: () => void;
   restoreQueue: (tracks: Track[], startIndex: number) => void;
@@ -105,6 +111,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   lastKnownTime: 0,
   syncRole: "standalone",
   remoteSeekRequest: null,
+  crossfadeSeconds: Number(localStorage.getItem("ihy-crossfade")) || 0,
+  normalizeVolume: localStorage.getItem("ihy-normalize") === "1",
+  autoplayRadio: localStorage.getItem("ihy-autoplay") === "1",
 
   playQueue: (tracks, startIndex = 0) => {
     if (forwarded("playQueue", tracks, startIndex)) return;
@@ -196,6 +205,21 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   },
 
   setSyncRole: (syncRole) => set({ syncRole }),
+
+  setCrossfadeSeconds: (crossfadeSeconds) => {
+    localStorage.setItem("ihy-crossfade", String(crossfadeSeconds));
+    set({ crossfadeSeconds });
+  },
+
+  setNormalizeVolume: (normalizeVolume) => {
+    localStorage.setItem("ihy-normalize", normalizeVolume ? "1" : "0");
+    set({ normalizeVolume });
+  },
+
+  setAutoplayRadio: (autoplayRadio) => {
+    localStorage.setItem("ihy-autoplay", autoplayRadio ? "1" : "0");
+    set({ autoplayRadio });
+  },
 
   applyRemoteState: (state) =>
     set({
@@ -302,4 +326,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 export function selectCurrentTrack(state: PlayerState): Track | null {
   if (state.position < 0) return null;
   return state.queue[state.order[state.position]] ?? null;
+}
+
+/** The track that will play after the current one, or null at a hard end. */
+export function selectNextTrack(state: PlayerState): Track | null {
+  const { queue, order, position, repeat } = state;
+  if (position < 0 || order.length === 0) return null;
+  if (position + 1 < order.length) return queue[order[position + 1]] ?? null;
+  if (repeat === "all") return queue[order[0]] ?? null;
+  return null;
 }

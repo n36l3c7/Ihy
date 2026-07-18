@@ -10,6 +10,37 @@ from mutagen.mp4 import MP4
 SUPPORTED_EXTENSIONS = {".mp3", ".flac", ".ogg", ".opus", ".m4a"}
 
 _YEAR_PATTERN = re.compile(r"(\d{4})")
+_GAIN_PATTERN = re.compile(r"[-+]?\d+(?:[.,]\d+)?")
+
+
+def _register_replaygain_keys() -> None:
+    """Expose ReplayGain tags through the easy interface for ID3 and MP4.
+
+    Vorbis comments (FLAC/Ogg/Opus) already pass lowercase keys through.
+    """
+    from mutagen.easyid3 import EasyID3
+    from mutagen.easymp4 import EasyMP4Tags
+
+    if "replaygain_track_gain" not in EasyID3.valid_keys:
+        EasyID3.RegisterTXXXKey("replaygain_track_gain", "REPLAYGAIN_TRACK_GAIN")
+    if "replaygain_track_gain" not in EasyMP4Tags.Get:
+        EasyMP4Tags.RegisterFreeformKey("replaygain_track_gain", "replaygain_track_gain")
+
+
+_register_replaygain_keys()
+
+
+def _parse_gain(raw: str | None) -> float | None:
+    """Parse values like "-6.32 dB" into -6.32."""
+    if raw is None:
+        return None
+    match = _GAIN_PATTERN.search(raw.replace("−", "-"))
+    if match is None:
+        return None
+    try:
+        return float(match.group(0).replace(",", "."))
+    except ValueError:
+        return None
 
 
 @dataclass
@@ -29,6 +60,7 @@ class AudioFileInfo:
     track_number: int | None = None
     disc_number: int | None = None
     has_embedded_cover: bool = False
+    replay_gain: float | None = None
 
 
 def _first(audio: mutagen.FileType, key: str) -> str | None:
@@ -103,4 +135,5 @@ def read_audio_file(path: Path) -> AudioFileInfo | None:
         track_number=_parse_number(_first(audio, "tracknumber")),
         disc_number=_parse_number(_first(audio, "discnumber")),
         has_embedded_cover=_has_embedded_cover(path, audio),
+        replay_gain=_parse_gain(_first(audio, "replaygain_track_gain")),
     )

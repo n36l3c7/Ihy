@@ -63,6 +63,46 @@ def list_tracks(
     return list(db.scalars(stmt)), total
 
 
+def radio_tracks(
+    db: Session, seed: Track, *, limit: int = 20, exclude_ids: set[int] | None = None
+) -> list[Track]:
+    """Random tracks similar to the seed (shared genre or artist).
+
+    Falls back to any random track when the seed has no genres/artists or
+    similarity leaves too few results. Used by the autoplay radio.
+    """
+    excluded = set(exclude_ids or set()) | {seed.id}
+    genre_ids = [genre.id for genre in seed.genres]
+    artist_ids = [artist.id for artist in seed.artists]
+    conditions = []
+    if genre_ids:
+        conditions.append(Track.genres.any(Genre.id.in_(genre_ids)))
+    if artist_ids:
+        conditions.append(Track.artists.any(Artist.id.in_(artist_ids)))
+
+    def pick(stmt: Select, count: int) -> list[Track]:
+        return list(
+            db.scalars(
+                stmt.where(Track.id.notin_(excluded))
+                .options(
+                    selectinload(Track.artists),
+                    selectinload(Track.album),
+                    selectinload(Track.genres),
+                )
+                .order_by(func.random())
+                .limit(count)
+            )
+        )
+
+    tracks: list[Track] = []
+    if conditions:
+        tracks = pick(select(Track).where(or_(*conditions)), limit)
+    if len(tracks) < limit:
+        excluded |= {track.id for track in tracks}
+        tracks += pick(select(Track), limit - len(tracks))
+    return tracks
+
+
 def get_track(db: Session, track_id: int) -> Track | None:
     return db.scalar(
         select(Track)
