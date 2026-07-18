@@ -3,12 +3,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/n36l3c7/Ihy/releases"><img src="https://img.shields.io/github/v/release/n36l3c7/Ihy?color=d9a441&label=release" alt="Release"></a>
-  <img src="https://img.shields.io/badge/python-3.13-3fb8a5" alt="Python 3.13">
-  <img src="https://img.shields.io/badge/react-19-3fb8a5" alt="React 19">
-  <img src="https://img.shields.io/badge/docker-single%20image-2e5e8c" alt="Docker">
-  <img src="https://img.shields.io/badge/OpenSubsonic-compatible-d9a441" alt="OpenSubsonic">
-  <a href="https://n36l3c7.github.io/Ihy/"><img src="https://img.shields.io/badge/website-n36l3c7.github.io%2FIhy-14100b" alt="Website"></a>
+  <a href="https://github.com/n36l3c7/Ihy/releases"><img src="https://img.shields.io/github/v/release/n36l3c7/Ihy?color=f5f5f8&label=release&labelColor=0a0a0c" alt="Release"></a>
+  <img src="https://img.shields.io/badge/python-3.13-00e5ff?labelColor=0a0a0c" alt="Python 3.13">
+  <img src="https://img.shields.io/badge/react-19-00e5ff?labelColor=0a0a0c" alt="React 19">
+  <img src="https://img.shields.io/badge/docker-single%20image-ff3d81?labelColor=0a0a0c" alt="Docker">
+  <img src="https://img.shields.io/badge/OpenSubsonic-compatible-f5f5f8?labelColor=0a0a0c" alt="OpenSubsonic">
+  <a href="https://n36l3c7.github.io/Ihy/"><img src="https://img.shields.io/badge/website-n36l3c7.github.io%2FIhy-0a0a0c?labelColor=0a0a0c" alt="Website"></a>
 </p>
 
 **Ihy** is a self-hosted music server and web player, named after the Egyptian god of

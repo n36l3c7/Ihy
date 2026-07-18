@@ -9,18 +9,20 @@
 <meta property="og:description" content="Gapless playback, smart playlists, tag editing, OpenSubsonic API, offline PWA. One Docker image.">
 <meta property="og:image" content="https://n36l3c7.github.io/Ihy/assets/banner.png">
 <meta property="og:type" content="website">
-<link rel="icon" href="assets/icon-192.png">
+<link rel="icon" href="assets/icon-glitch-192.png">
 <style>
+  /* Glitch theme: white on absolute black, VHS chromatic fringing */
   :root {
-    --night: #14100b;
-    --night2: #1d160e;
-    --panel: #1a1410;
-    --line: #382c1f;
-    --gold: #d9a441;
-    --gold-light: #f2c96b;
-    --faience: #3fb8a5;
-    --sand: #eadfc4;
-    --muted: #a6926e;
+    --night: #020204;
+    --night2: #0a0a0c;
+    --panel: #0a0a0c;
+    --line: #232327;
+    --gold: #f5f5f8;
+    --gold-light: #ffffff;
+    --faience: #00e5ff;
+    --magenta: #ff3d81;
+    --sand: #e6e6ea;
+    --muted: #8b8b94;
     --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
     --sans: system-ui, "Segoe UI", sans-serif;
     --mono: "Cascadia Code", Consolas, monospace;
@@ -42,7 +44,16 @@
   .frieze {
     height: 12px;
     background: repeating-linear-gradient(90deg, var(--gold) 0 10px, transparent 10px 26px);
-    opacity: .35;
+    opacity: .22;
+  }
+  /* CRT scanlines over the whole page */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .16) 0 1px, transparent 1px 4px);
+    z-index: 5;
   }
 
   /* Hero */
@@ -50,7 +61,7 @@
   .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
   .hero .veil {
     position: absolute; inset: 0;
-    background: radial-gradient(75% 75% at 50% 45%, rgba(20, 16, 11, .92) 0%, rgba(20, 16, 11, .4) 70%, transparent 100%);
+    background: radial-gradient(75% 75% at 50% 45%, rgba(2, 2, 4, .92) 0%, rgba(2, 2, 4, .4) 70%, transparent 100%);
   }
   .hero .inner {
     position: relative;
@@ -59,7 +70,7 @@
     padding: 96px 24px 84px;
     text-align: center;
   }
-  .hero img.mark { width: 132px; height: 132px; border-radius: 26%; box-shadow: 0 12px 60px rgba(217, 164, 65, .22); }
+  .hero img.mark { width: 132px; height: 132px; border-radius: 26%; box-shadow: 0 12px 60px rgba(255, 255, 255, .14); }
   .hero h1 {
     font-family: var(--serif);
     font-size: clamp(58px, 11vw, 110px);
@@ -67,10 +78,11 @@
     letter-spacing: .18em;
     margin: 26px 0 4px -.09em;
     line-height: 1;
-    background: linear-gradient(180deg, var(--gold-light), #b3801f);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: var(--gold-light);
+    text-shadow:
+      3px 0 0 rgba(255, 61, 129, .65),
+      -3px 0 0 rgba(0, 229, 255, .65),
+      0 0 26px rgba(255, 255, 255, .28);
   }
   .hero .tagline {
     font-size: clamp(12px, 2.2vw, 16px);
@@ -88,7 +100,11 @@
     font-weight: 600;
     letter-spacing: .04em;
   }
-  .btn.gold { background: linear-gradient(180deg, var(--gold-light), var(--gold)); color: #1c1408; }
+  .btn.gold {
+    background: var(--gold-light);
+    color: #0a0a0c;
+    box-shadow: 3px 0 0 rgba(255, 61, 129, .5), -3px 0 0 rgba(0, 229, 255, .5);
+  }
   .btn.gold:hover { text-decoration: none; filter: brightness(1.06); }
   .btn.ghost { border: 1px solid var(--line); color: var(--sand); }
   .btn.ghost:hover { border-color: var(--gold); text-decoration: none; }
@@ -102,7 +118,13 @@
     font-size: 11px; letter-spacing: .24em; text-transform: uppercase;
     color: var(--muted);
   }
-  .eyebrow::after { content: ""; width: 3px; height: 13px; background: var(--gold); border-radius: 2px; }
+  .eyebrow::after {
+    content: "";
+    width: 3px;
+    height: 13px;
+    background: linear-gradient(180deg, var(--magenta), var(--faience));
+    border-radius: 2px;
+  }
   h2 {
     font-family: var(--serif);
     font-size: 26px;
@@ -198,7 +220,7 @@
   <canvas id="rain" aria-hidden="true"></canvas>
   <div class="veil"></div>
   <div class="inner">
-    <img class="mark" src="assets/icon-512.png" alt="The Ihy sistrum mark" width="132" height="132">
+    <img class="mark" src="assets/icon-glitch-512.png" alt="The Ihy sistrum mark" width="132" height="132">
     <h1>IHY</h1>
     <div class="tagline">Self-hosted music · <em>ancient soul</em></div>
     <p class="pitch">
@@ -307,7 +329,7 @@ docker compose up -d --build
   <section id="themes">
     <span class="eyebrow">Themes</span>
     <h2>Eight moods, one temple</h2>
-    <p class="lead">From the default Emerald to the Egypt-x-cyberpunk Neon Nile and the VHS-white Glitch.</p>
+    <p class="lead">From the default Emerald to the Egypt-x-cyberpunk Neon Nile and the VHS-white Glitch — the look of this very page.</p>
     <div class="themes">
       <span class="theme"><i style="background:#10b981"></i>Emerald</span>
       <span class="theme"><i style="background:#8b5cf6"></i>Violet</span>
@@ -354,21 +376,24 @@ docker compose up -d --build
     canvas.width = box.width * devicePixelRatio;
     canvas.height = box.height * devicePixelRatio;
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-    columns = Array.from({ length: Math.ceil(box.width / CELL) }, (_, i) => ({
-      x: i * CELL + CELL / 2,
-      y: Math.random() * box.height,
-      speed: 26 + Math.random() * 55,
-      gold: Math.random() < .3,
-    }));
-    ctx.fillStyle = "#14100b";
+    columns = Array.from({ length: Math.ceil(box.width / CELL) }, (_, i) => {
+      const roll = Math.random();
+      return {
+        x: i * CELL + CELL / 2,
+        y: Math.random() * box.height,
+        speed: 26 + Math.random() * 55,
+        tint: roll < .1 ? "255,61,129" : roll < .2 ? "0,229,255" : "245,245,248",
+      };
+    });
+    ctx.fillStyle = "#020204";
     ctx.fillRect(0, 0, box.width, box.height);
   }
-  function drawGlyph(x, y, alpha, gold) {
+  function drawGlyph(x, y, alpha, tint) {
     ctx.save();
     ctx.translate(x, y);
     ctx.lineWidth = 1.3;
     ctx.lineCap = "round";
-    ctx.strokeStyle = gold ? `rgba(217,164,65,${alpha})` : `rgba(63,184,165,${alpha})`;
+    ctx.strokeStyle = `rgba(${tint},${alpha})`;
     glyphs[(Math.random() * glyphs.length) | 0](ctx);
     ctx.restore();
   }
@@ -377,12 +402,12 @@ docker compose up -d --build
     const dt = Math.min(.05, (now - last) / 1000 || .016);
     last = now;
     const box = canvas.parentElement.getBoundingClientRect();
-    ctx.fillStyle = "rgba(20,16,11,0.12)";
+    ctx.fillStyle = "rgba(2,2,4,0.12)";
     ctx.fillRect(0, 0, box.width, box.height);
     for (const col of columns) {
       col.y += col.speed * dt;
       if (col.y > box.height + CELL) { col.y = -CELL; }
-      if (Math.random() < .4) drawGlyph(col.x, col.y, .55, col.gold);
+      if (Math.random() < .4) drawGlyph(col.x, col.y, .5, col.tint);
     }
     requestAnimationFrame(frame);
   }
@@ -392,7 +417,7 @@ docker compose up -d --build
     const box = canvas.parentElement.getBoundingClientRect();
     for (const col of columns) {
       for (let y = CELL; y < box.height; y += CELL) {
-        if (Math.random() < .25) drawGlyph(col.x, y, .08 + Math.random() * .3, col.gold);
+        if (Math.random() < .25) drawGlyph(col.x, y, .08 + Math.random() * .3, col.tint);
       }
     }
   } else {
