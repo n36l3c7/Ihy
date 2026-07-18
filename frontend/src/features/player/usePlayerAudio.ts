@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Track } from "../../api/types";
 import { recordPlay } from "../../api/userLibrary";
 import { useAuthStore } from "../../stores/authStore";
+import { EQ_FREQUENCIES, useEqStore } from "../../stores/eqStore";
 import { selectCurrentTrack, usePlayerStore } from "../../stores/playerStore";
 
 function streamUrl(trackId: number): string {
@@ -27,6 +28,43 @@ export function usePlayerAudio() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const lastRecordedRef = useRef<Track | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Equalizer: route the audio element through a chain of biquad filters
+  useEffect(() => {
+    const context = new AudioContext();
+    const source = context.createMediaElementSource(audio);
+    const filters = EQ_FREQUENCIES.map((frequency, index) => {
+      const filter = context.createBiquadFilter();
+      filter.type =
+        index === 0 ? "lowshelf" : index === EQ_FREQUENCIES.length - 1 ? "highshelf" : "peaking";
+      filter.frequency.value = frequency;
+      filter.Q.value = 1;
+      filter.gain.value = 0;
+      return filter;
+    });
+    let node: AudioNode = source;
+    for (const filter of filters) {
+      node.connect(filter);
+      node = filter;
+    }
+    node.connect(context.destination);
+    audioContextRef.current = context;
+
+    const apply = () => {
+      const { enabled, gains } = useEqStore.getState();
+      filters.forEach((filter, index) => {
+        filter.gain.value = enabled ? (gains[index] ?? 0) : 0;
+      });
+    };
+    apply();
+    const unsubscribe = useEqStore.subscribe(apply);
+    return () => {
+      unsubscribe();
+      void context.close();
+      audioContextRef.current = null;
+    };
+  }, [audio]);
 
   // Record listening history once per playback start
   useEffect(() => {
@@ -56,6 +94,8 @@ export function usePlayerAudio() {
   useEffect(() => {
     if (!currentTrack) return;
     if (isPlaying) {
+      // Browsers keep the AudioContext suspended until a user gesture
+      void audioContextRef.current?.resume().catch(() => {});
       void audio.play().catch(() => usePlayerStore.getState().setPlaying(false));
     } else {
       audio.pause();

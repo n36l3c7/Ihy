@@ -44,6 +44,7 @@ interface PlayerState {
   setActiveSavedQueueId: (id: number | null) => void;
   setPendingSeekSeconds: (seconds: number | null) => void;
   setLastKnownTime: (seconds: number) => void;
+  restoreQueue: (tracks: Track[], startIndex: number) => void;
   jumpTo: (orderIndex: number) => void;
   removeAt: (orderIndex: number) => void;
   moveTo: (fromIndex: number, toIndex: number) => void;
@@ -146,6 +147,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setPendingSeekSeconds: (pendingSeekSeconds) => set({ pendingSeekSeconds }),
 
   setLastKnownTime: (lastKnownTime) => set({ lastKnownTime }),
+
+  restoreQueue: (tracks, startIndex) => {
+    if (tracks.length === 0) return;
+    set({
+      queue: tracks,
+      order: tracks.map((_, index) => index),
+      position: Math.min(Math.max(startIndex, 0), tracks.length - 1),
+      isPlaying: false,
+    });
+  },
 
   jumpTo: (orderIndex) => {
     if (orderIndex >= 0 && orderIndex < get().order.length) {

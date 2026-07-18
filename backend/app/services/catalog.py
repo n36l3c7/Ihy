@@ -40,11 +40,14 @@ def list_tracks(
     artist_id: int | None = None,
     album_id: int | None = None,
     genre_id: int | None = None,
+    ids: list[int] | None = None,
     sort: TrackSort = "title",
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[Track], int]:
     base = _apply_track_filters(select(Track), q, artist_id, album_id, genre_id)
+    if ids is not None:
+        base = base.where(Track.id.in_(ids))
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
     order = Track.created_at.desc() if sort == "recent" else Track.title
     stmt = (

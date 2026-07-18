@@ -1,12 +1,54 @@
 from dataclasses import asdict
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel
+from sqlalchemy import select
 
-from app.api.deps import AdminUserDep
+from app.api.deps import AdminUserDep, CurrentUserDep, DbDep
+from app.models.library import Source
+from app.schemas.library import TrackRead
 from app.schemas.scan import ScanResultRead, ScanStatusRead
+from app.services import browse as browse_service
+from app.services.browse import InvalidBrowsePathError
 from app.services.scan_manager import scan_manager
 
 router = APIRouter()
+
+
+class BrowseSourceRead(BaseModel):
+    id: int
+    name: str
+
+
+class BrowseRead(BaseModel):
+    sources: list[BrowseSourceRead] = []
+    path: str = ""
+    folders: list[str] = []
+    tracks: list[TrackRead] = []
+
+
+@router.get("/browse", response_model=BrowseRead)
+def browse_library(
+    db: DbDep,
+    _user: CurrentUserDep,
+    source_id: int | None = None,
+    path: Annotated[str, Query(max_length=1024)] = "",
+) -> BrowseRead:
+    """Browse the library by folder. Without source_id, lists the sources."""
+    if source_id is None:
+        sources = db.scalars(select(Source).where(Source.enabled.is_(True)).order_by(Source.name))
+        return BrowseRead(
+            sources=[BrowseSourceRead(id=source.id, name=source.name) for source in sources]
+        )
+    source = db.get(Source, source_id)
+    if source is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+    try:
+        folders, tracks = browse_service.browse_folder(db, source, path)
+    except InvalidBrowsePathError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+    return BrowseRead(path=path, folders=folders, tracks=tracks)
 
 
 def _current_status() -> ScanStatusRead:

@@ -4,6 +4,7 @@ from app.api.v1 import (
     albums,
     artists,
     auth,
+    bookmarks,
     downloads,
     favorites,
     genres,
@@ -13,6 +14,7 @@ from app.api.v1 import (
     queues,
     settings,
     sources,
+    stats,
     tracks,
     users,
 )
@@ -32,6 +34,8 @@ api_router.include_router(favorites.router, prefix="/favorites", tags=["favorite
 api_router.include_router(playlists.router, prefix="/playlists", tags=["playlists"])
 api_router.include_router(history.router, prefix="/history", tags=["history"])
 api_router.include_router(queues.router, prefix="/queues", tags=["queues"])
+api_router.include_router(stats.router, prefix="/stats", tags=["stats"])
+api_router.include_router(bookmarks.router, prefix="/bookmarks", tags=["bookmarks"])
 api_router.include_router(settings.router, prefix="/settings", tags=["settings"])
 api_router.include_router(downloads.router, prefix="/downloads", tags=["downloads"])
 

@@ -15,6 +15,7 @@ export interface TrackFilters {
   artist_id?: number;
   album_id?: number;
   genre_id?: number;
+  ids?: string;
   sort?: "title" | "recent";
   limit?: number;
   offset?: number;

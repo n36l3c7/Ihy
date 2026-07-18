@@ -33,16 +33,26 @@ def list_tracks(
     artist_id: int | None = None,
     album_id: int | None = None,
     genre_id: int | None = None,
+    ids: Annotated[str | None, Query(max_length=10000)] = None,
     sort: TrackSort = "title",
-    limit: Annotated[int, Query(ge=1, le=500)] = 50,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
+    id_list: list[int] | None = None
+    if ids is not None:
+        try:
+            id_list = [int(part) for part in ids.split(",") if part.strip()]
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="ids must be integers"
+            ) from None
     items, total = catalog.list_tracks(
         db,
         q=q,
         artist_id=artist_id,
         album_id=album_id,
         genre_id=genre_id,
+        ids=id_list,
         sort=sort,
         limit=limit,
         offset=offset,

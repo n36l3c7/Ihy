@@ -20,9 +20,12 @@ import { AlbumDetailPage } from "./features/library/AlbumDetailPage";
 import { AlbumsPage } from "./features/library/AlbumsPage";
 import { ArtistDetailPage } from "./features/library/ArtistDetailPage";
 import { ArtistsPage } from "./features/library/ArtistsPage";
+import { BookmarksPage } from "./features/library/BookmarksPage";
 import { FavoritesPage } from "./features/library/FavoritesPage";
+import { FoldersPage } from "./features/library/FoldersPage";
 import { GenresPage } from "./features/library/GenresPage";
 import { HistoryPage } from "./features/library/HistoryPage";
+import { StatsPage } from "./features/library/StatsPage";
 import { TracksPage } from "./features/library/TracksPage";
 import { PlaylistPage } from "./features/playlists/PlaylistPage";
 
@@ -44,6 +47,9 @@ const router = createBrowserRouter([
           { path: "/genres", element: <GenresPage /> },
           { path: "/favorites", element: <FavoritesPage /> },
           { path: "/history", element: <HistoryPage /> },
+          { path: "/folders", element: <FoldersPage /> },
+          { path: "/bookmarks", element: <BookmarksPage /> },
+          { path: "/stats", element: <StatsPage /> },
           { path: "/playlists/:playlistId", element: <PlaylistPage /> },
           {
             path: "/settings",

@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Bookmark,
+  ChartColumn,
   Disc3,
+  Folder,
   Heart,
   History,
   ListMusic,
@@ -13,13 +16,14 @@ import {
   Tags,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 
 import type { Playlist } from "../api/types";
 import { createPlaylist, deletePlaylist, getPlaylist, getPlaylists } from "../api/userLibrary";
 import { PlayerBar } from "../features/player/PlayerBar";
 import { QueuePanel } from "../features/player/QueuePanel";
+import { initSessionPersistence, restoreSession } from "../lib/session";
 import { useAuthStore } from "../stores/authStore";
 import { usePlayerStore } from "../stores/playerStore";
 import { ContextMenu, contextMenuItemClass } from "./ContextMenu";
@@ -29,11 +33,14 @@ const LIBRARY_ITEMS = [
   { to: "/artists", label: "Artists", icon: Mic2 },
   { to: "/albums", label: "Albums", icon: Disc3 },
   { to: "/genres", label: "Genres", icon: Tags },
+  { to: "/folders", label: "Folders", icon: Folder },
 ];
 
 const PERSONAL_ITEMS = [
   { to: "/favorites", label: "Liked songs", icon: Heart },
   { to: "/history", label: "Recently played", icon: History },
+  { to: "/bookmarks", label: "Bookmarks", icon: Bookmark },
+  { to: "/stats", label: "Statistics", icon: ChartColumn },
 ];
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -52,6 +59,12 @@ export function Layout() {
   const [menu, setMenu] = useState<{ x: number; y: number; playlist: Playlist } | null>(null);
 
   const playlists = useQuery({ queryKey: ["playlists"], queryFn: getPlaylists });
+
+  // Resume the last playback session (paused, at the saved position)
+  useEffect(() => {
+    initSessionPersistence();
+    void restoreSession();
+  }, []);
 
   const createMutation = useMutation({
     mutationFn: () => createPlaylist("New playlist"),

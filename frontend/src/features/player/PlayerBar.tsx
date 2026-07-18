@@ -1,4 +1,5 @@
 import {
+  BookmarkPlus,
   ListOrdered,
   MicVocal,
   Moon,
@@ -9,15 +10,19 @@ import {
   Shuffle,
   SkipBack,
   SkipForward,
+  SlidersVertical,
   Volume2,
 } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 
+import { createBookmark } from "../../api/wave3";
 import { CoverImage } from "../../components/CoverImage";
 import { FavoriteButton } from "../../components/FavoriteButton";
 import { formatDuration } from "../../lib/format";
+import { useEqStore } from "../../stores/eqStore";
 import { selectCurrentTrack, usePlayerStore } from "../../stores/playerStore";
+import { EqualizerDialog } from "./EqualizerDialog";
 import { LyricsDialog } from "./LyricsDialog";
 import { usePlayerAudio } from "./usePlayerAudio";
 
@@ -95,8 +100,18 @@ export function PlayerBar() {
   const toggleQueueOpen = usePlayerStore((state) => state.toggleQueueOpen);
   const { currentTime, duration, seek, restartOrPrevious } = usePlayerAudio();
   const [lyricsOpen, setLyricsOpen] = useState(false);
+  const [eqOpen, setEqOpen] = useState(false);
+  const eqEnabled = useEqStore((state) => state.enabled);
 
   if (!track) return null;
+
+  const handleBookmark = () => {
+    const note = window.prompt(
+      `Bookmark "${track.title}" at ${formatDuration(currentTime)} — note (optional):`,
+    );
+    if (note === null) return; // cancelled
+    void createBookmark(track.id, currentTime, note.trim() || undefined);
+  };
 
   const sleepActive = sleepEndsAt !== null || stopAfterTrack;
   const sleepRemaining =
@@ -272,6 +287,25 @@ export function PlayerBar() {
           </BarMenu>
           <button
             type="button"
+            onClick={handleBookmark}
+            className="rounded-full p-2 transition-colors hover:text-zinc-100"
+            aria-label="Bookmark current position"
+            title="Bookmark current position"
+          >
+            <BookmarkPlus className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setEqOpen(true)}
+            className={`rounded-full p-2 transition-colors hover:text-zinc-100 ${
+              eqEnabled ? "text-emerald-500" : ""
+            }`}
+            aria-label="Equalizer"
+          >
+            <SlidersVertical className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => setLyricsOpen(true)}
             className="rounded-full p-2 transition-colors hover:text-zinc-100"
             aria-label="Show lyrics"
@@ -309,6 +343,7 @@ export function PlayerBar() {
           onClose={() => setLyricsOpen(false)}
         />
       )}
+      {eqOpen && <EqualizerDialog onClose={() => setEqOpen(false)} />}
     </footer>
   );
 }
