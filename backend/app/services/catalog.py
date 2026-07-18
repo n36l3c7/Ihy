@@ -107,11 +107,15 @@ def get_artist(db: Session, artist_id: int) -> Artist | None:
     return db.get(Artist, artist_id)
 
 
+AlbumSort = Literal["title", "recent", "random"]
+
+
 def list_albums(
     db: Session,
     *,
     q: str | None = None,
     artist_id: int | None = None,
+    sort: AlbumSort = "title",
     limit: int | None = 50,
     offset: int = 0,
 ) -> tuple[list[tuple[Album, int]], int]:
@@ -123,12 +127,19 @@ def list_albums(
         base = base.where(Album.artist_id == artist_id)
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
 
+    order = (
+        Album.created_at.desc()
+        if sort == "recent"
+        else func.random()
+        if sort == "random"
+        else Album.title
+    )
     stmt = (
         select(Album, func.count(Track.id))
         .outerjoin(Track, Track.album_id == Album.id)
         .options(selectinload(Album.artist))
         .group_by(Album.id)
-        .order_by(Album.title)
+        .order_by(order)
         .offset(offset)
     )
     if q:

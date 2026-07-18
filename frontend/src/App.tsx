@@ -21,8 +21,10 @@ import { AlbumsPage } from "./features/library/AlbumsPage";
 import { ArtistDetailPage } from "./features/library/ArtistDetailPage";
 import { ArtistsPage } from "./features/library/ArtistsPage";
 import { BookmarksPage } from "./features/library/BookmarksPage";
+import { ExplorePage } from "./features/library/ExplorePage";
 import { FavoritesPage } from "./features/library/FavoritesPage";
 import { FoldersPage } from "./features/library/FoldersPage";
+import { HomePage } from "./features/library/HomePage";
 import { GenresPage } from "./features/library/GenresPage";
 import { HistoryPage } from "./features/library/HistoryPage";
 import { StatsPage } from "./features/library/StatsPage";
@@ -57,7 +59,9 @@ const router = createBrowserRouter([
       {
         element: <Layout />,
         children: [
-          { index: true, element: <Navigate to="/tracks" replace /> },
+          { index: true, element: <Navigate to="/home" replace /> },
+          { path: "/home", element: <HomePage /> },
+          { path: "/explore", element: <ExplorePage /> },
           { path: "/tracks", element: <TracksPage /> },
           { path: "/artists", element: <ArtistsPage /> },
           { path: "/artists/:artistId", element: <ArtistDetailPage /> },

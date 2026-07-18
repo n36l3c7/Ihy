@@ -2,10 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bookmark,
   ChartColumn,
+  Compass,
   Disc3,
   Folder,
   Heart,
   History,
+  House,
   ListMusic,
   LogOut,
   Mic2,
@@ -32,6 +34,8 @@ import { usePlayerStore } from "../stores/playerStore";
 import { ContextMenu, contextMenuItemClass } from "./ContextMenu";
 
 const LIBRARY_ITEMS = [
+  { to: "/home", label: "Home", icon: House },
+  { to: "/explore", label: "Explore", icon: Compass },
   { to: "/tracks", label: "Tracks", icon: Music2 },
   { to: "/artists", label: "Artists", icon: Mic2 },
   { to: "/albums", label: "Albums", icon: Disc3 },

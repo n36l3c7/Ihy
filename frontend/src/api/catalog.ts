@@ -31,6 +31,7 @@ export const getArtist = (id: number) => api<ArtistDetail>(`/artists/${id}`);
 export const getAlbums = (params: {
   q?: string;
   artist_id?: number;
+  sort?: "title" | "recent" | "random";
   limit?: number;
   offset?: number;
 }) => api<Page<Album>>(`/albums${qs(params)}`);

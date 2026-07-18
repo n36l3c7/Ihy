@@ -109,6 +109,15 @@ def test_list_albums(
     assert [a["title"] for a in filtered["items"]] == ["Second Album"]
 
 
+def test_albums_sort_modes(
+    client: TestClient, user_headers: dict[str, str], seeded_library: SimpleNamespace
+) -> None:
+    for sort in ("recent", "random"):
+        body = client.get(f"{ALBUMS_URL}?sort={sort}", headers=user_headers).json()
+        assert body["total"] == 2
+        assert len(body["items"]) == 2
+
+
 def test_album_detail_with_ordered_tracks(
     client: TestClient, user_headers: dict[str, str], seeded_library: SimpleNamespace
 ) -> None:

@@ -24,6 +24,7 @@ import { useEqStore } from "../../stores/eqStore";
 import { selectCurrentTrack, usePlayerStore } from "../../stores/playerStore";
 import { EqualizerDialog } from "./EqualizerDialog";
 import { LyricsDialog } from "./LyricsDialog";
+import { NowPlayingView } from "./NowPlayingView";
 import { usePlayerAudio } from "./usePlayerAudio";
 
 const SLEEP_OPTIONS = [15, 30, 45, 60, 90];
@@ -101,6 +102,7 @@ export function PlayerBar() {
   const { currentTime, duration, seek, restartOrPrevious } = usePlayerAudio();
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [eqOpen, setEqOpen] = useState(false);
+  const [nowPlayingOpen, setNowPlayingOpen] = useState(false);
   const eqEnabled = useEqStore((state) => state.enabled);
   const syncRole = usePlayerStore((state) => state.syncRole);
   const takeOver = usePlayerStore((state) => state.takeOver);
@@ -140,7 +142,15 @@ export function PlayerBar() {
       )}
       <div className="flex items-center gap-4">
         <div className="flex w-64 min-w-0 items-center gap-3">
-          <CoverImage albumId={track.album?.id} className="h-12 w-12 shrink-0 rounded" />
+          <button
+            type="button"
+            onClick={() => setNowPlayingOpen(true)}
+            className="shrink-0 transition-transform hover:scale-105"
+            aria-label="Open now playing view"
+            title="Now playing"
+          >
+            <CoverImage albumId={track.album?.id} className="h-12 w-12 rounded" />
+          </button>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-zinc-100">{track.title}</p>
             <p className="truncate text-xs text-zinc-400">
@@ -358,6 +368,16 @@ export function PlayerBar() {
         />
       )}
       {eqOpen && <EqualizerDialog onClose={() => setEqOpen(false)} />}
+      {nowPlayingOpen && (
+        <NowPlayingView
+          track={track}
+          currentTime={currentTime}
+          duration={duration}
+          seek={seek}
+          restartOrPrevious={restartOrPrevious}
+          onClose={() => setNowPlayingOpen(false)}
+        />
+      )}
     </footer>
   );
 }

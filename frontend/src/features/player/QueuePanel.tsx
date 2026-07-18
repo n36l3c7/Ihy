@@ -4,14 +4,14 @@ import { useMemo, useState } from "react";
 
 import {
   deleteQueue,
-  getQueue,
   getQueues,
   type SavedQueueSummary,
   saveQueue,
   updateQueue,
 } from "../../api/queues";
 import { artistNames, formatDuration } from "../../lib/format";
-import { selectOrderedTracks, usePlayerStore } from "../../stores/playerStore";
+import { usePlayerStore } from "../../stores/playerStore";
+import { loadSavedQueue, queueSnapshot } from "./queueActions";
 
 export function QueuePanel() {
   const queryClient = useQueryClient();
@@ -33,20 +33,11 @@ export function QueuePanel() {
   const savedQueues = useQuery({ queryKey: ["saved-queues"], queryFn: getQueues });
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ["saved-queues"] });
 
-  const snapshot = () => {
-    const state = usePlayerStore.getState();
-    return {
-      track_ids: selectOrderedTracks(state).map((track) => track.id),
-      current_index: Math.max(0, state.position),
-      current_seconds: state.lastKnownTime,
-    };
-  };
-
   const saveMutation = useMutation({
     mutationFn: async () => {
       const name = window.prompt("Queue name:");
       if (!name?.trim()) return null;
-      return saveQueue({ name: name.trim(), ...snapshot() });
+      return saveQueue({ name: name.trim(), ...queueSnapshot() });
     },
     onSuccess: (created) => {
       if (created) {
@@ -57,25 +48,12 @@ export function QueuePanel() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: () => updateQueue(activeSavedQueueId as number, snapshot()),
+    mutationFn: () => updateQueue(activeSavedQueueId as number, queueSnapshot()),
     onSuccess: invalidate,
   });
 
   const loadQueue = async (summary: SavedQueueSummary) => {
-    const store = usePlayerStore.getState();
-    // Musicolet-style: save the position of the currently active queue first
-    if (store.activeSavedQueueId !== null && store.position >= 0) {
-      try {
-        await updateQueue(store.activeSavedQueueId, snapshot());
-      } catch {
-        // best effort
-      }
-    }
-    const detail = await getQueue(summary.id);
-    if (detail.tracks.length === 0) return;
-    store.playQueue(detail.tracks, Math.min(detail.current_index, detail.tracks.length - 1));
-    store.setPendingSeekSeconds(detail.current_seconds);
-    store.setActiveSavedQueueId(detail.id);
+    await loadSavedQueue(summary.id);
     invalidate();
   };
 

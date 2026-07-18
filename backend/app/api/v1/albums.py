@@ -25,10 +25,13 @@ def list_albums(
     _user: CurrentUserDep,
     q: Annotated[str | None, Query(max_length=200)] = None,
     artist_id: int | None = None,
+    sort: catalog.AlbumSort = "title",
     limit: Annotated[int, Query(ge=1, le=500)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
-    rows, total = catalog.list_albums(db, q=q, artist_id=artist_id, limit=limit, offset=offset)
+    rows, total = catalog.list_albums(
+        db, q=q, artist_id=artist_id, sort=sort, limit=limit, offset=offset
+    )
     return {
         "items": [_album_read(album, count) for album, count in rows],
         "total": total,
