@@ -1,5 +1,26 @@
 import { api } from "./http";
 
+export interface SpotifyImportStatus {
+  available: boolean;
+  running: boolean;
+  state: string;
+  error: string | null;
+  total: number;
+  matched: number;
+  playlist_id: number | null;
+  playlist_name: string | null;
+  log: string[];
+}
+
+export const getSpotifyImportStatus = () =>
+  api<SpotifyImportStatus>("/downloads/spotify-playlist");
+
+export const startSpotifyImport = (url: string, name?: string) =>
+  api<SpotifyImportStatus>("/downloads/spotify-playlist", {
+    method: "POST",
+    body: JSON.stringify({ url, name: name || null }),
+  });
+
 export interface DownloadWatch {
   id: number;
   name: string;

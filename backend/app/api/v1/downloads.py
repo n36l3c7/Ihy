@@ -1,10 +1,11 @@
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import AdminUserDep, DbDep
+from app.api.deps import AdminUserDep, CurrentUserDep, DbDep
 from app.models.downloads import DownloadFix, DownloadWatch
 from app.models.library import Source
 from app.schemas.downloads import (
@@ -22,6 +23,7 @@ from app.services import app_settings
 from app.services import downloads as downloads_service
 from app.services import spotify as spotify_service
 from app.services.spotify import SpotifyError
+from app.services.spotify_import import spotify_import_manager
 
 router = APIRouter()
 
@@ -210,3 +212,69 @@ def run_downloads(_admin: AdminUserDep) -> DownloadStatusRead:
             status_code=status.HTTP_409_CONFLICT, detail="A download check is already running"
         )
     return download_status(_admin)
+
+
+class SpotifyPlaylistImportRequest(BaseModel):
+    url: str = Field(min_length=10, max_length=500)
+    name: str | None = Field(default=None, max_length=100)
+    source_id: int | None = None
+
+
+class SpotifyPlaylistImportStatus(BaseModel):
+    available: bool
+    running: bool
+    state: str
+    error: str | None
+    total: int
+    matched: int
+    playlist_id: int | None
+    playlist_name: str | None
+    log: list[str]
+
+
+def _import_status() -> SpotifyPlaylistImportStatus:
+    manager = spotify_import_manager
+    return SpotifyPlaylistImportStatus(
+        available=downloads_service.spotdl_available(),
+        running=manager.running,
+        state=manager.state,
+        error=manager.error,
+        total=manager.total,
+        matched=manager.matched,
+        playlist_id=manager.playlist_id,
+        playlist_name=manager.playlist_name,
+        log=manager.log_lines[-30:],
+    )
+
+
+@router.get("/spotify-playlist", response_model=SpotifyPlaylistImportStatus)
+def spotify_playlist_status(_user: CurrentUserDep) -> SpotifyPlaylistImportStatus:
+    return _import_status()
+
+
+@router.post(
+    "/spotify-playlist",
+    response_model=SpotifyPlaylistImportStatus,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def import_spotify_playlist(
+    payload: SpotifyPlaylistImportRequest, user: CurrentUserDep
+) -> SpotifyPlaylistImportStatus:
+    """Download a Spotify playlist with spotdl and build the matching
+    Ihy playlist for the requesting user."""
+    if not downloads_service.spotdl_available():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="spotdl is not installed on the server",
+        )
+    if "spotify.com" not in payload.url:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Not a Spotify URL"
+        )
+    if not spotify_import_manager.start(
+        user.id, payload.url.strip(), payload.name, payload.source_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="An import is already running"
+        )
+    return _import_status()

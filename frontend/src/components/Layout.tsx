@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bookmark,
   ChartColumn,
+  CloudDownload,
   Compass,
   Disc3,
   Folder,
@@ -39,6 +40,7 @@ import {
   importPlaylistFile,
 } from "../api/userLibrary";
 import { SmartPlaylistDialog } from "../features/playlists/SmartPlaylistDialog";
+import { SpotifyImportDialog } from "../features/playlists/SpotifyImportDialog";
 import { Logo } from "./Logo";
 import { PlayerBar } from "../features/player/PlayerBar";
 import { QueuePanel } from "../features/player/QueuePanel";
@@ -88,6 +90,7 @@ export function Layout() {
   const [theme, setTheme] = useState(currentTheme);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [smartDialogOpen, setSmartDialogOpen] = useState(false);
+  const [spotifyDialogOpen, setSpotifyDialogOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const playlists = useQuery({ queryKey: ["playlists"], queryFn: getPlaylists });
@@ -218,6 +221,15 @@ export function Layout() {
                 Playlists
               </p>
               <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setSpotifyDialogOpen(true)}
+                  className="rounded-full p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                  aria-label="Import from Spotify"
+                  title="Import a Spotify playlist (downloads via spotdl)"
+                >
+                  <CloudDownload className="h-4 w-4" />
+                </button>
                 <button
                   type="button"
                   onClick={() => importInputRef.current?.click()}
@@ -394,6 +406,9 @@ export function Layout() {
         </button>
       </nav>
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
+      {spotifyDialogOpen && (
+        <SpotifyImportDialog onClose={() => setSpotifyDialogOpen(false)} />
+      )}
       {smartDialogOpen && (
         <SmartPlaylistDialog
           onSave={async (payload) => {

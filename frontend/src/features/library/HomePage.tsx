@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { ListMusic, Play } from "lucide-react";
+import { ListMusic, Play, Sparkles } from "lucide-react";
 
 import { getAlbums } from "../../api/catalog";
+import { getDailyMixes } from "../../api/mixes";
 import { getQueues } from "../../api/queues";
 import type { Track } from "../../api/types";
 import { getHistory } from "../../api/userLibrary";
@@ -34,6 +35,11 @@ export function HomePage() {
     queryKey: ["albums", "recent-home"],
     queryFn: () => getAlbums({ sort: "recent", limit: 12 }),
   });
+  const mixes = useQuery({
+    queryKey: ["daily-mixes"],
+    queryFn: getDailyMixes,
+    staleTime: 30 * 60 * 1000, // stable within the day anyway
+  });
 
   const recentTracks: Track[] = [];
   if (history.data) {
@@ -55,6 +61,35 @@ export function HomePage() {
         {greeting()}
         {displayName ? `, ${displayName}` : ""}
       </h1>
+
+      {mixes.data && mixes.data.length > 0 && (
+        <section className="mb-10">
+          <h2 className="mb-4 text-lg font-semibold">Made for today</h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {mixes.data.map((mix) => (
+              <button
+                key={mix.name}
+                type="button"
+                onClick={() => playQueue(mix.tracks)}
+                className="group flex items-center gap-4 rounded-lg border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-900/40 p-4 text-left transition-colors hover:border-emerald-600/50"
+              >
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-emerald-600/15">
+                  <Sparkles className="h-6 w-6 text-emerald-500 transition-transform group-hover:scale-110" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold text-zinc-100">
+                    {mix.name}
+                  </span>
+                  <span className="block truncate text-sm text-zinc-400">
+                    {mix.genre} · {mix.tracks.length} tracks
+                  </span>
+                </span>
+                <Play className="ml-auto h-5 w-5 shrink-0 text-zinc-600 transition-colors group-hover:text-emerald-500" />
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {queues.data && queues.data.length > 0 && (
         <section className="mb-10">
