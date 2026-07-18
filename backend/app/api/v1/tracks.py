@@ -9,7 +9,7 @@ from app.schemas.common import Page
 from app.schemas.library import LibraryDeleteResult, TrackRead
 from app.schemas.lyrics import LyricsRead
 from app.schemas.tags import BatchTagsRequest, BatchTagsResult, TrackFileTags, TrackTagsUpdate
-from app.services import catalog, library_editor, tag_editor
+from app.services import catalog, library_editor, tag_editor, transcoder
 from app.services import lyrics as lyrics_service
 from app.services.catalog import TrackSort
 from app.services.tag_editor import FileMissingError, UnsupportedFormatError
@@ -172,11 +172,29 @@ def track_lyrics(
 
 
 @router.get("/{track_id}/stream")
-def stream_track(track_id: int, db: DbDep, _user: MediaUserDep) -> FileResponse:
-    """Serve the audio file directly. Range requests (seeking) are supported."""
+def stream_track(
+    track_id: int,
+    db: DbDep,
+    _user: MediaUserDep,
+    format: Annotated[str | None, Query(pattern="^(opus)$")] = None,
+    bitrate: Annotated[int | None, Query(ge=32, le=320)] = None,
+) -> FileResponse:
+    """Serve the audio file. Range requests (seeking) are supported.
+
+    With format=opus&bitrate=N the file is transcoded once with ffmpeg and
+    served from the on-disk cache (bandwidth saver for remote listening).
+    """
     track = catalog.get_track(db, track_id)
     if track is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+    if format == "opus":
+        try:
+            cached = transcoder.transcoded_path(track, bitrate or 128)
+        except transcoder.TranscodeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+            ) from None
+        return FileResponse(cached, media_type="audio/ogg")
     path = Path(track.file_path)
     if not path.is_file():
         raise HTTPException(

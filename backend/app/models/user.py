@@ -31,6 +31,9 @@ class User(TimestampMixin, Base):
         default=UserRole.USER,
     )
     is_active: Mapped[bool] = mapped_column(default=True)
+    # Random secret used as the password for Subsonic-compatible clients
+    # (their token auth needs a plaintext secret, never the real password)
+    subsonic_token: Mapped[str | None] = mapped_column(String(64))
 
     playlists: Mapped[list["Playlist"]] = relationship(
         back_populates="owner", cascade="all, delete-orphan"

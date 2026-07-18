@@ -16,7 +16,10 @@ const PRELOAD_AHEAD_SECONDS = 20;
 
 function streamUrl(trackId: number): string {
   const token = useAuthStore.getState().accessToken ?? "";
-  return `/api/v1/tracks/${trackId}/stream?token=${encodeURIComponent(token)}`;
+  const quality = usePlayerStore.getState().streamQuality;
+  const transcode =
+    quality !== "original" ? `&format=opus&bitrate=${encodeURIComponent(quality)}` : "";
+  return `/api/v1/tracks/${trackId}/stream?token=${encodeURIComponent(token)}${transcode}`;
 }
 
 function coverUrl(albumId: number): string {

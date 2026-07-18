@@ -5,6 +5,8 @@ import {
   connectLastfm,
   disconnectLastfm,
   getScrobbleSettings,
+  getSubsonicCredentials,
+  rotateSubsonicCredentials,
   setListenBrainzToken,
 } from "../../api/scrobbling";
 import { PageSpinner } from "../../components/Spinner";
@@ -51,6 +53,16 @@ export function ScrobblingPage() {
   const disconnectMutation = useMutation({
     mutationFn: disconnectLastfm,
     onSuccess: invalidate,
+  });
+
+  const subsonic = useQuery({
+    queryKey: ["subsonic-credentials"],
+    queryFn: getSubsonicCredentials,
+  });
+
+  const rotateMutation = useMutation({
+    mutationFn: rotateSubsonicCredentials,
+    onSuccess: (data) => queryClient.setQueryData(["subsonic-credentials"], data),
   });
 
   if (settings.isPending || token === null) return <PageSpinner />;
@@ -168,6 +180,39 @@ export function ScrobblingPage() {
             {lastfmError && <p className="mt-2 text-sm text-red-400">{lastfmError}</p>}
           </>
         )}
+      </div>
+
+      <div className="mt-6 rounded-lg border border-zinc-800 p-4">
+        <p className="text-sm font-medium text-zinc-300">Mobile apps (Subsonic)</p>
+        <p className="mt-1 text-xs text-zinc-500">
+          Ihy speaks the OpenSubsonic protocol: connect apps like Symfonium, Tempo or DSub
+          using this server&apos;s address and the credentials below. The secret replaces
+          your real password and can be rotated at any time.
+        </p>
+        {subsonic.data && (
+          <dl className="mt-3 grid gap-1 text-sm">
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-zinc-500">Server</dt>
+              <dd className="font-mono text-zinc-200">{window.location.origin}</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-zinc-500">Username</dt>
+              <dd className="font-mono text-zinc-200">{subsonic.data.username}</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-zinc-500">Password</dt>
+              <dd className="break-all font-mono text-zinc-200">{subsonic.data.token}</dd>
+            </div>
+          </dl>
+        )}
+        <button
+          type="button"
+          onClick={() => rotateMutation.mutate()}
+          disabled={rotateMutation.isPending}
+          className="mt-3 rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-100"
+        >
+          Rotate secret
+        </button>
       </div>
     </div>
   );

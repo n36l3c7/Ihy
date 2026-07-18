@@ -7,6 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
+from app.api.subsonic import SubsonicError, subsonic_exception_handler
+from app.api.subsonic import router as subsonic_router
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.workers.scheduler import shutdown_scheduler, start_scheduler
@@ -48,6 +50,9 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_router, prefix="/api/v1")
+    # Subsonic-compatible API for third-party mobile clients
+    app.include_router(subsonic_router, prefix="/rest")
+    app.add_exception_handler(SubsonicError, subsonic_exception_handler)
 
     # Serve the built frontend when available (production / Docker image)
     if settings.static_dir and settings.static_dir.is_dir():

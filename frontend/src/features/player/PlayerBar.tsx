@@ -106,6 +106,8 @@ export function PlayerBar() {
   const setNormalizeVolume = usePlayerStore((state) => state.setNormalizeVolume);
   const autoplayRadio = usePlayerStore((state) => state.autoplayRadio);
   const setAutoplayRadio = usePlayerStore((state) => state.setAutoplayRadio);
+  const streamQuality = usePlayerStore((state) => state.streamQuality);
+  const setStreamQuality = usePlayerStore((state) => state.setStreamQuality);
   const { currentTime, duration, seek, restartOrPrevious } = usePlayerAudio();
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [eqOpen, setEqOpen] = useState(false);
@@ -316,6 +318,25 @@ export function PlayerBar() {
                   >
                     {seconds === 0 ? "Off (gapless)" : `${seconds} seconds`}
                     {seconds === crossfadeSeconds && <span className="text-emerald-500">●</span>}
+                  </button>
+                ))}
+                <p className="border-t border-zinc-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Quality
+                </p>
+                {[
+                  { id: "original", label: "Original" },
+                  { id: "192", label: "High (Opus 192k)" },
+                  { id: "128", label: "Normal (Opus 128k)" },
+                  { id: "96", label: "Data saver (Opus 96k)" },
+                ].map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={barMenuItemClass}
+                    onClick={() => setStreamQuality(option.id)}
+                  >
+                    {option.label}
+                    {option.id === streamQuality && <span className="text-emerald-500">●</span>}
                   </button>
                 ))}
                 <div className="border-t border-zinc-800">

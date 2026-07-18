@@ -29,3 +29,14 @@ export const connectLastfm = (payload: LastfmConnectPayload) =>
 
 export const disconnectLastfm = () =>
   api<ScrobbleSettings>("/scrobbling/lastfm", { method: "DELETE" });
+
+export interface SubsonicCredentials {
+  username: string;
+  token: string;
+}
+
+export const getSubsonicCredentials = () =>
+  api<SubsonicCredentials>("/scrobbling/subsonic");
+
+export const rotateSubsonicCredentials = () =>
+  api<SubsonicCredentials>("/scrobbling/subsonic", { method: "POST" });

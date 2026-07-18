@@ -49,6 +49,7 @@ interface PlayerState {
   crossfadeSeconds: number; // 0 = gapless switch, no fade
   normalizeVolume: boolean; // apply per-track ReplayGain when available
   autoplayRadio: boolean; // keep playing similar tracks when the queue ends
+  streamQuality: string; // "original" or Opus bitrate ("192" | "128" | "96")
   playQueue: (tracks: Track[], startIndex?: number) => void;
   togglePlay: () => void;
   setPlaying: (playing: boolean) => void;
@@ -68,6 +69,7 @@ interface PlayerState {
   setCrossfadeSeconds: (seconds: number) => void;
   setNormalizeVolume: (enabled: boolean) => void;
   setAutoplayRadio: (enabled: boolean) => void;
+  setStreamQuality: (quality: string) => void;
   applyRemoteState: (state: RemoteState) => void;
   takeOver: () => void;
   restoreQueue: (tracks: Track[], startIndex: number) => void;
@@ -114,6 +116,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   crossfadeSeconds: Number(localStorage.getItem("ihy-crossfade")) || 0,
   normalizeVolume: localStorage.getItem("ihy-normalize") === "1",
   autoplayRadio: localStorage.getItem("ihy-autoplay") === "1",
+  streamQuality: localStorage.getItem("ihy-quality") || "original",
 
   playQueue: (tracks, startIndex = 0) => {
     if (forwarded("playQueue", tracks, startIndex)) return;
@@ -219,6 +222,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   setAutoplayRadio: (autoplayRadio) => {
     localStorage.setItem("ihy-autoplay", autoplayRadio ? "1" : "0");
     set({ autoplayRadio });
+  },
+
+  setStreamQuality: (streamQuality) => {
+    localStorage.setItem("ihy-quality", streamQuality);
+    set({ streamQuality });
   },
 
   applyRemoteState: (state) =>

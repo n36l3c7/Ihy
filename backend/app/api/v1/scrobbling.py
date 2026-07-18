@@ -1,3 +1,5 @@
+import secrets
+
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
@@ -5,6 +7,28 @@ from app.api.deps import CurrentUserDep, DbDep
 from app.services.scrobbler import LastfmError, get_or_create_config, lastfm_get_session
 
 router = APIRouter()
+
+
+class SubsonicCredentialsRead(BaseModel):
+    username: str
+    token: str
+
+
+@router.get("/subsonic", response_model=SubsonicCredentialsRead)
+def get_subsonic_credentials(db: DbDep, user: CurrentUserDep) -> SubsonicCredentialsRead:
+    """Credentials for Subsonic-compatible apps; the secret is created on
+    first request and can be rotated with POST."""
+    if not user.subsonic_token:
+        user.subsonic_token = secrets.token_hex(16)
+        db.commit()
+    return SubsonicCredentialsRead(username=user.username, token=user.subsonic_token)
+
+
+@router.post("/subsonic", response_model=SubsonicCredentialsRead)
+def rotate_subsonic_credentials(db: DbDep, user: CurrentUserDep) -> SubsonicCredentialsRead:
+    user.subsonic_token = secrets.token_hex(16)
+    db.commit()
+    return SubsonicCredentialsRead(username=user.username, token=user.subsonic_token)
 
 
 class ScrobbleSettingsRead(BaseModel):
