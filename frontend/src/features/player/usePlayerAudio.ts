@@ -22,6 +22,8 @@ export function usePlayerAudio() {
   const currentTrack = usePlayerStore(selectCurrentTrack);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
   const volume = usePlayerStore((state) => state.volume);
+  const playbackRate = usePlayerStore((state) => state.playbackRate);
+  const sleepEndsAt = usePlayerStore((state) => state.sleepEndsAt);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const lastRecordedRef = useRef<Track | null>(null);
@@ -64,12 +66,35 @@ export function usePlayerAudio() {
     audio.volume = volume;
   }, [audio, volume]);
 
+  useEffect(() => {
+    audio.playbackRate = playbackRate;
+  }, [audio, playbackRate]);
+
+  // Sleep timer: pause when the deadline passes
+  useEffect(() => {
+    if (sleepEndsAt === null) return;
+    const check = () => {
+      if (Date.now() >= sleepEndsAt) {
+        usePlayerStore.getState().setPlaying(false);
+        usePlayerStore.getState().setSleepEndsAt(null);
+      }
+    };
+    const timer = setInterval(check, 1000);
+    return () => clearInterval(timer);
+  }, [sleepEndsAt]);
+
   // Audio element events
   useEffect(() => {
     const onTimeUpdate = () => setCurrentTime(audio.currentTime);
     const onLoadedMetadata = () => setDuration(audio.duration || 0);
     const onEnded = () => {
-      const { repeat, next } = usePlayerStore.getState();
+      const { repeat, next, stopAfterTrack, setPlaying, setStopAfterTrack } =
+        usePlayerStore.getState();
+      if (stopAfterTrack) {
+        setStopAfterTrack(false);
+        setPlaying(false);
+        return;
+      }
       if (repeat === "one") {
         audio.currentTime = 0;
         void audio.play().catch(() => {});

@@ -22,6 +22,9 @@ interface PlayerState {
   shuffle: boolean;
   repeat: RepeatMode;
   volume: number;
+  playbackRate: number;
+  sleepEndsAt: number | null; // epoch ms; playback pauses when reached
+  stopAfterTrack: boolean;
   playQueue: (tracks: Track[], startIndex?: number) => void;
   togglePlay: () => void;
   setPlaying: (playing: boolean) => void;
@@ -30,6 +33,9 @@ interface PlayerState {
   toggleShuffle: () => void;
   cycleRepeat: () => void;
   setVolume: (volume: number) => void;
+  setPlaybackRate: (rate: number) => void;
+  setSleepEndsAt: (endsAt: number | null) => void;
+  setStopAfterTrack: (stop: boolean) => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -40,6 +46,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   shuffle: false,
   repeat: "off",
   volume: 1,
+  playbackRate: 1,
+  sleepEndsAt: null,
+  stopAfterTrack: false,
 
   playQueue: (tracks, startIndex = 0) => {
     if (tracks.length === 0) return;
@@ -101,6 +110,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     })),
 
   setVolume: (volume) => set({ volume }),
+
+  setPlaybackRate: (playbackRate) => set({ playbackRate }),
+
+  setSleepEndsAt: (sleepEndsAt) => set({ sleepEndsAt, stopAfterTrack: false }),
+
+  setStopAfterTrack: (stopAfterTrack) => set({ stopAfterTrack, sleepEndsAt: null }),
 }));
 
 export function selectCurrentTrack(state: PlayerState): Track | null {
