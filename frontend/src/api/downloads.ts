@@ -61,6 +61,7 @@ export interface SpotdlOptions {
   audio_providers: string;
   lyrics_providers: string;
   output_template: string;
+  album_type: "album" | "single" | "compilation" | null;
   overwrite: "skip" | "metadata" | "force" | null;
   restrict: "strict" | "ascii" | null;
   max_filename_length: number | null;
@@ -95,3 +96,27 @@ export const resolveSpotifyUrl = (url: string) =>
   api<{ name: string }>(`/downloads/spotify/resolve?url=${encodeURIComponent(url)}`);
 
 export const getDownloadLog = () => api<{ lines: string[] }>("/downloads/log");
+
+export const runWatch = (watchId: number) =>
+  api<DownloadStatus>(`/downloads/watches/${watchId}/run`, { method: "POST" });
+
+export interface DownloadFix {
+  id: number;
+  watch_id: number;
+  watch_name: string | null;
+  song: string;
+  spotify_url: string | null;
+  youtube_url: string | null;
+  error: string | null;
+  created_at: string;
+}
+
+export const getFixes = () => api<DownloadFix[]>("/downloads/fixes");
+
+export const updateFix = (
+  id: number,
+  changes: { spotify_url?: string | null; youtube_url?: string | null },
+) => api<DownloadFix>(`/downloads/fixes/${id}`, { method: "PATCH", body: JSON.stringify(changes) });
+
+export const deleteFix = (id: number) =>
+  api<void>(`/downloads/fixes/${id}`, { method: "DELETE" });

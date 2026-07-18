@@ -13,6 +13,7 @@ interface FormState {
   client_secret: string;
   audio_providers: string;
   lyrics_providers: string;
+  album_type: string;
   output_format: string;
   bitrate: string;
   threads: string;
@@ -56,6 +57,7 @@ export function SpotdlSettingsPage() {
         client_secret: data.client_secret,
         audio_providers: data.audio_providers,
         lyrics_providers: data.lyrics_providers,
+        album_type: data.album_type ?? "",
         output_format: data.output_format ?? "",
         bitrate: data.bitrate ?? "",
         threads: data.threads?.toString() ?? "",
@@ -109,6 +111,7 @@ export function SpotdlSettingsPage() {
       client_secret: form.client_secret.trim(),
       audio_providers: form.audio_providers.trim(),
       lyrics_providers: form.lyrics_providers.trim(),
+      album_type: (form.album_type || null) as SpotdlOptions["album_type"],
       output_format: (form.output_format || null) as SpotdlOptions["output_format"],
       bitrate: form.bitrate.trim() || null,
       threads: parseOptionalInt(form.threads),
@@ -226,6 +229,17 @@ export function SpotdlSettingsPage() {
             value={form.output_template}
             onChange={set("output_template")}
           />
+        </div>
+        <div className="mt-4">
+          <label className={labelClass}>
+            Album type (set "album" to avoid single/album duplicates)
+          </label>
+          <select className={inputClass} value={form.album_type} onChange={set("album_type")}>
+            <option value="">all (default)</option>
+            <option value="album">album — full albums only</option>
+            <option value="single">single</option>
+            <option value="compilation">compilation</option>
+          </select>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-4">
           <div>

@@ -2,14 +2,16 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import AdminUserDep, DbDep
-from app.models.downloads import DownloadWatch
+from app.models.downloads import DownloadFix, DownloadWatch
 from app.models.library import Source
 from app.schemas.downloads import (
     DownloadLogRead,
     DownloadStatusRead,
+    FixRead,
+    FixUpdate,
     SpotifyArtistRead,
     SpotifyResolveRead,
     WatchCreate,
@@ -73,6 +75,66 @@ def update_watch(
 def delete_watch(watch_id: int, db: DbDep, _admin: AdminUserDep) -> None:
     watch = _get_watch_or_404(db, watch_id)
     db.delete(watch)
+    db.commit()
+
+
+@router.post(
+    "/watches/{watch_id}/run",
+    response_model=DownloadStatusRead,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def run_single_watch(watch_id: int, db: DbDep, admin: AdminUserDep) -> DownloadStatusRead:
+    """Check only this watch, right now."""
+    _get_watch_or_404(db, watch_id)
+    if not downloads_service.spotdl_available():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="spotdl is not installed on the server",
+        )
+    if not downloads_service.download_manager.start(watch_ids=[watch_id]):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="A download check is already running"
+        )
+    return download_status(admin)
+
+
+@router.get("/fixes", response_model=list[FixRead])
+def list_fixes(db: DbDep, _admin: AdminUserDep) -> list[FixRead]:
+    """Failed songs recorded during checks, pairable with a YouTube URL."""
+    fixes = db.scalars(
+        select(DownloadFix)
+        .options(selectinload(DownloadFix.watch))
+        .order_by(DownloadFix.created_at.desc())
+    )
+    result = []
+    for fix in fixes:
+        data = FixRead.model_validate(fix)
+        data.watch_name = fix.watch.name if fix.watch else None
+        result.append(data)
+    return result
+
+
+@router.patch("/fixes/{fix_id}", response_model=FixRead)
+def update_fix(fix_id: int, payload: FixUpdate, db: DbDep, _admin: AdminUserDep) -> FixRead:
+    fix = db.get(DownloadFix, fix_id)
+    if fix is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fix not found")
+    changes = payload.model_dump(exclude_unset=True)
+    for field, value in changes.items():
+        setattr(fix, field, value.strip() if isinstance(value, str) else value)
+    db.commit()
+    db.refresh(fix)
+    data = FixRead.model_validate(fix)
+    data.watch_name = fix.watch.name if fix.watch else None
+    return data
+
+
+@router.delete("/fixes/{fix_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_fix(fix_id: int, db: DbDep, _admin: AdminUserDep) -> None:
+    fix = db.get(DownloadFix, fix_id)
+    if fix is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fix not found")
+    db.delete(fix)
     db.commit()
 
 

@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 
 import { type BatchTagChanges, batchUpdateTags } from "../../api/tags";
 import type { Track } from "../../api/types";
+import { CoverImage } from "../../components/CoverImage";
 import { Modal } from "../../components/Modal";
 import { buttonClass, inputClass } from "../auth/LoginPage";
 import { joinListField, parseListField, parseNumberField, parseTextField } from "./tagFormUtils";
@@ -77,10 +78,19 @@ export function BatchTagsDialog({ tracks, heading, albumArtist, onClose }: Batch
 
   return (
     <Modal title={heading} onClose={onClose}>
-      <p className="mb-4 text-xs text-zinc-500">
-        Only the fields you change are written to the files; the rest stay untouched.
-        {` ${MULTIPLE_VALUES} means the selected tracks currently have different values.`}
-      </p>
+      <div className="mb-4 flex items-start gap-4">
+        {(() => {
+          const albumIds = new Set(tracks.map((track) => track.album?.id ?? null));
+          const [only] = albumIds;
+          return albumIds.size === 1 && only ? (
+            <CoverImage albumId={only} className="h-16 w-16 shrink-0 rounded-md shadow" />
+          ) : null;
+        })()}
+        <p className="text-xs text-zinc-500">
+          Only the fields you change are written to the files; the rest stay untouched.
+          {` ${MULTIPLE_VALUES} means the selected tracks currently have different values.`}
+        </p>
+      </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
           <label className={labelClass}>Artists (separate multiple with ;)</label>

@@ -8,9 +8,44 @@ export interface TrackTagsUpdate {
   album_artist?: string | null;
   genres?: string[] | null;
   year?: number | null;
+  date?: string | null;
   track_number?: number | null;
   disc_number?: number | null;
+  composer?: string | null;
+  comment?: string | null;
+  copyright?: string | null;
+  isrc?: string | null;
+  bpm?: string | null;
+  conductor?: string | null;
+  language?: string | null;
+  publisher?: string | null;
+  lyricist?: string | null;
+  website?: string | null;
 }
+
+export interface TrackFileTags {
+  artists: string[];
+  genres: string[];
+  title: string | null;
+  album: string | null;
+  album_artist: string | null;
+  date: string | null;
+  track_number: string | null;
+  disc_number: string | null;
+  composer: string | null;
+  comment: string | null;
+  copyright: string | null;
+  isrc: string | null;
+  bpm: string | null;
+  conductor: string | null;
+  language: string | null;
+  publisher: string | null;
+  lyricist: string | null;
+  website: string | null;
+}
+
+export const getFileTags = (trackId: number) =>
+  api<TrackFileTags>(`/tracks/${trackId}/tags/file`);
 
 export type BatchTagChanges = Pick<
   TrackTagsUpdate,

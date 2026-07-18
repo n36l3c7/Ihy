@@ -21,6 +21,7 @@ DEFAULT_SPOTDL_OPTIONS: dict = {
     "audio_providers": "",
     "lyrics_providers": "",
     "output_template": "",
+    "album_type": None,
     "overwrite": None,
     "restrict": None,
     "max_filename_length": None,

@@ -35,7 +35,32 @@ class InvalidImageError(TagEditError):
     pass
 
 
-# API field -> mutagen easy tag key (normalized across ID3, Vorbis and MP4)
+def _register_easyid3_extras() -> None:
+    """EasyID3 has no built-in comment key; register one backed by COMM frames."""
+    from mutagen.easyid3 import EasyID3
+    from mutagen.id3 import COMM
+
+    if "comment" in EasyID3.valid_keys:
+        return
+
+    def getter(id3, _key):
+        frames = id3.getall("COMM")
+        return [str(text) for text in frames[0].text] if frames else []
+
+    def setter(id3, _key, value):
+        id3.delall("COMM")
+        id3.add(COMM(encoding=3, lang="XXX", desc="", text=list(value)))
+
+    def deleter(id3, _key):
+        id3.delall("COMM")
+
+    EasyID3.RegisterKey("comment", getter, setter, deleter)
+
+
+_register_easyid3_extras()
+
+# API field -> mutagen easy tag key (normalized across ID3, Vorbis and MP4).
+# Keys a format does not support are skipped at write time.
 _TAG_KEYS = {
     "title": "title",
     "artists": "artist",
@@ -43,9 +68,40 @@ _TAG_KEYS = {
     "album_artist": "albumartist",
     "genres": "genre",
     "year": "date",
+    "date": "date",
     "track_number": "tracknumber",
     "disc_number": "discnumber",
+    "composer": "composer",
+    "comment": "comment",
+    "copyright": "copyright",
+    "isrc": "isrc",
+    "bpm": "bpm",
+    "conductor": "conductor",
+    "language": "language",
+    "publisher": "organization",
+    "lyricist": "lyricist",
+    "website": "website",
 }
+
+# Single-valued fields exposed by the file-tags read endpoint
+_READ_SINGLE_FIELDS = (
+    "title",
+    "album",
+    "album_artist",
+    "date",
+    "track_number",
+    "disc_number",
+    "composer",
+    "comment",
+    "copyright",
+    "isrc",
+    "bpm",
+    "conductor",
+    "language",
+    "publisher",
+    "lyricist",
+    "website",
+)
 
 
 def write_tags_to_file(path: Path, changes: dict[str, Any]) -> None:
@@ -70,11 +126,40 @@ def write_tags_to_file(path: Path, changes: dict[str, Any]) -> None:
         else:
             text = str(value).strip()
             values = [text] if text else []
-        if values:
-            audio[key] = values
-        elif key in audio:
-            del audio[key]
+        try:
+            if values:
+                audio[key] = values
+            elif key in audio:
+                del audio[key]
+        except (KeyError, ValueError):
+            # Key not supported by this container format — skip it
+            logger.info("Tag %r not supported by %s, skipped", key, path.suffix)
     audio.save()
+
+
+def read_full_tags(path: Path) -> dict | None:
+    """Read every supported tag field from the file (raw values, mp3tag-style)."""
+    try:
+        audio = mutagen.File(path, easy=True)
+    except Exception:
+        return None
+    if audio is None:
+        return None
+
+    def raw_values(key: str) -> list[str]:
+        try:
+            return [str(value) for value in (audio.get(key) or [])]
+        except Exception:
+            return []
+
+    result: dict = {
+        "artists": raw_values("artist"),
+        "genres": raw_values("genre"),
+    }
+    for field in _READ_SINGLE_FIELDS:
+        values = raw_values(_TAG_KEYS[field])
+        result[field] = values[0] if values else None
+    return result
 
 
 def refresh_track_from_file(db: Session, track: Track) -> Track:

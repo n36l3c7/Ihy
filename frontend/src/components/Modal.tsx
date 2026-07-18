@@ -5,9 +5,10 @@ interface ModalProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  wide?: boolean;
 }
 
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({ title, onClose, children, wide = false }: ModalProps) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -22,7 +23,9 @@ export function Modal({ title, onClose, children }: ModalProps) {
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-2xl"
+        className={`max-h-[90vh] w-full ${
+          wide ? "max-w-6xl" : "max-w-lg"
+        } overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-2xl`}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-label={title}

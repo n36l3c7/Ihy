@@ -193,6 +193,54 @@ def test_batch_reports_errors_without_aborting(
     assert len(body["errors"]) == 2  # missing file + unknown id
 
 
+def test_read_file_tags_endpoint(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    seeded_library: SimpleNamespace,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    track = seeded_library.tracks[0]
+    monkeypatch.setattr(
+        "app.services.tag_editor.read_full_tags",
+        lambda path: {
+            "artists": ["Alpha Band"],
+            "genres": ["Rock"],
+            "title": "Ocean Song",
+            "album": "First Album",
+            "composer": "A. Composer",
+            "comment": "great take",
+            "date": "2020-03-01",
+        },
+    )
+    response = client.get(f"{TRACKS_URL}/{track.id}/tags/file", headers=admin_headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["composer"] == "A. Composer"
+    assert body["comment"] == "great take"
+    assert body["date"] == "2020-03-01"
+    assert body["isrc"] is None
+
+
+def test_edit_extended_fields(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    seeded_library: SimpleNamespace,
+    fake_tag_io: SimpleNamespace,
+) -> None:
+    track = seeded_library.tracks[0]
+    fake_tag_io.reads[track.file_path] = make_info(title=track.title)
+
+    response = client.patch(
+        f"{TRACKS_URL}/{track.id}/tags",
+        json={"composer": "Hans Zimmer", "comment": "fixed", "bpm": "120"},
+        headers=admin_headers,
+    )
+    assert response.status_code == 200
+    assert fake_tag_io.writes == [
+        (track.file_path, {"composer": "Hans Zimmer", "comment": "fixed", "bpm": "120"})
+    ]
+
+
 def test_save_album_cover_service(
     db_session: Session, seeded_library: SimpleNamespace, tmp_path: Path
 ) -> None:

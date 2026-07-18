@@ -1,14 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Music2, Plus, Trash2 } from "lucide-react";
+import { DownloadCloud, Music2, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 
 import { getSources } from "../../../api/admin";
 import {
   createWatch,
   deleteWatch,
+  getDownloadStatus,
   getSpotdlOptions,
   getWatches,
   resolveSpotifyUrl,
+  runWatch,
   searchSpotifyArtists,
   updateWatch,
 } from "../../../api/downloads";
@@ -31,6 +33,21 @@ export function WatchesPage() {
   const watches = useQuery({ queryKey: ["download-watches"], queryFn: getWatches });
   const options = useQuery({ queryKey: ["spotdl-options"], queryFn: getSpotdlOptions });
   const hasCredentials = Boolean(options.data?.client_id && options.data?.client_secret);
+  const status = useQuery({
+    queryKey: ["download-status"],
+    queryFn: getDownloadStatus,
+    refetchInterval: (q) => (q.state.data?.running ? 2000 : false),
+  });
+  const running = status.data?.running ?? false;
+
+  const runWatchMutation = useMutation({
+    mutationFn: runWatch,
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["download-status"] });
+      void queryClient.invalidateQueries({ queryKey: ["download-watches"] });
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Failed to start"),
+  });
 
   const spotifySearch = useQuery({
     queryKey: ["spotify-search", query],
@@ -261,6 +278,16 @@ export function WatchesPage() {
                 />
                 enabled
               </label>
+              <button
+                type="button"
+                onClick={() => runWatchMutation.mutate(watch.id)}
+                disabled={running || runWatchMutation.isPending}
+                className="shrink-0 rounded-full p-2 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-emerald-400 disabled:opacity-30"
+                aria-label={`Check ${watch.name} now`}
+                title="Check this watch now"
+              >
+                <DownloadCloud className="h-4 w-4" />
+              </button>
               <button
                 type="button"
                 onClick={() => deleteMutation.mutate(watch.id)}

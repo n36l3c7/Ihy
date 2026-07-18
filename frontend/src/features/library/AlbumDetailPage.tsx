@@ -10,6 +10,7 @@ import { PageSpinner } from "../../components/Spinner";
 import { formatTotalDuration } from "../../lib/format";
 import { useAuthStore } from "../../stores/authStore";
 import { usePlayerStore } from "../../stores/playerStore";
+import { AlbumTracksEditor } from "../tag-editor/AlbumTracksEditor";
 import { BatchTagsDialog } from "../tag-editor/BatchTagsDialog";
 import { TrackList } from "./TrackList";
 
@@ -19,6 +20,7 @@ export function AlbumDetailPage() {
   const isAdmin = useAuthStore((state) => state.user?.role === "admin");
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
+  const [tracksEditorOpen, setTracksEditorOpen] = useState(false);
   const [coverVersion, setCoverVersion] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,6 +58,14 @@ export function AlbumDetailPage() {
           heading={`Edit tags for all ${album.tracks.length} tracks`}
           albumArtist={album.artist?.name ?? ""}
           onClose={() => setEditOpen(false)}
+        />
+      )}
+      {tracksEditorOpen && (
+        <AlbumTracksEditor
+          albumId={album.id}
+          albumTitle={album.title}
+          tracks={album.tracks}
+          onClose={() => setTracksEditorOpen(false)}
         />
       )}
       <div className="mb-8 flex items-end gap-6">
@@ -112,14 +122,24 @@ export function AlbumDetailPage() {
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {isAdmin && (
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              className="flex items-center gap-2 rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-100"
-            >
-              <Pencil className="h-4 w-4" />
-              Edit album
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                className="flex items-center gap-2 rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-100"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit album
+              </button>
+              <button
+                type="button"
+                onClick={() => setTracksEditorOpen(true)}
+                className="flex items-center gap-2 rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-100"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit tracks
+              </button>
+            </>
           )}
           <button
             type="button"

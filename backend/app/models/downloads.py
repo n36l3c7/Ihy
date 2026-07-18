@@ -27,3 +27,22 @@ class DownloadWatch(TimestampMixin, Base):
     last_error: Mapped[str | None] = mapped_column(Text)
 
     source: Mapped["Source"] = relationship()
+
+
+class DownloadFix(TimestampMixin, Base):
+    """A track spotdl failed to download. Once the admin provides a matching
+    YouTube URL, the pair is passed to spotdl (spotify_url|youtube_url) on
+    every subsequent check of the watch."""
+
+    __tablename__ = "download_fixes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    watch_id: Mapped[int] = mapped_column(
+        ForeignKey("download_watches.id", ondelete="CASCADE"), index=True
+    )
+    song: Mapped[str] = mapped_column(String(500))
+    spotify_url: Mapped[str | None] = mapped_column(String(500))
+    youtube_url: Mapped[str | None] = mapped_column(String(500))
+    error: Mapped[str | None] = mapped_column(Text)
+
+    watch: Mapped["DownloadWatch"] = relationship()

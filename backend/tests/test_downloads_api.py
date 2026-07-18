@@ -7,10 +7,10 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from app.db.base import Base
-from app.models.downloads import DownloadWatch
+from app.models.downloads import DownloadFix, DownloadWatch
 from app.models.library import Source
 from app.services import downloads as downloads_service
-from app.services.downloads import DownloadManager
+from app.services.downloads import DownloadManager, parse_failures
 
 WATCHES_URL = "/api/v1/downloads/watches"
 STATUS_URL = "/api/v1/downloads/status"
@@ -187,6 +187,155 @@ def test_download_settings_roundtrip(
         SETTINGS_URL, json={"check_interval_hours": 0}, headers=admin_headers
     )
     assert disabled.status_code == 200
+
+
+def test_parse_failures() -> None:
+    lines = [
+        "Downloading Artist - Song",
+        "LookupError: No results found for song: Halsey - Without Me",
+        "AudioProviderError: YT-DLP download error - https://open.spotify.com/track/abc123XYZ",
+        "Downloaded 3 songs",
+    ]
+    failures = parse_failures(lines)
+    songs = [failure["song"] for failure in failures]
+    assert "Halsey - Without Me" in songs
+    assert any(f["spotify_url"] == "https://open.spotify.com/track/abc123XYZ" for f in failures)
+
+
+def _make_manager_env(tmp_path: Path):
+    engine = create_engine(
+        f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False}
+    )
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+    music_dir = tmp_path / "music"
+    music_dir.mkdir()
+    with session_factory() as db:
+        src = Source(name="lib", path=str(music_dir))
+        db.add(src)
+        db.commit()
+        watch = DownloadWatch(name="Solo", query="solo-query", source_id=src.id)
+        other = DownloadWatch(name="Other", query="other-query", source_id=src.id)
+        db.add_all([watch, other])
+        db.commit()
+        watch_id, other_id = watch.id, other.id
+    return engine, session_factory, music_dir, watch_id, other_id
+
+
+def _wait_for(manager: DownloadManager) -> None:
+    deadline = time.monotonic() + 5
+    while manager.running and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert manager.running is False
+
+
+def test_manager_single_watch_run(tmp_path: Path) -> None:
+    engine, session_factory, _music, watch_id, _other = _make_manager_env(tmp_path)
+    calls: list[str] = []
+
+    def fake_runner(query, _dir, _options, _on_line):
+        calls.append(query)
+        return True, "done"
+
+    manager = DownloadManager(
+        session_factory=session_factory, runner=fake_runner, start_scan=lambda: True
+    )
+    assert manager.start(watch_ids=[watch_id]) is True
+    _wait_for(manager)
+    assert calls == ["solo-query"]
+    engine.dispose()
+
+
+def test_manager_records_failures_and_applies_fixes(tmp_path: Path) -> None:
+    engine, session_factory, _music, watch_id, _other = _make_manager_env(tmp_path)
+    with session_factory() as db:
+        db.add(
+            DownloadFix(
+                watch_id=watch_id,
+                song="Old Failure",
+                spotify_url="https://open.spotify.com/track/old",
+                youtube_url="https://youtu.be/xyz",
+            )
+        )
+        db.commit()
+
+    calls: list[str] = []
+
+    def fake_runner(query, _dir, _options, on_line):
+        calls.append(query)
+        if query == "solo-query":
+            on_line("LookupError: No results found for song: Artist - Missing Song")
+        return True, "done"
+
+    manager = DownloadManager(
+        session_factory=session_factory, runner=fake_runner, start_scan=lambda: True
+    )
+    assert manager.start(watch_ids=[watch_id]) is True
+    _wait_for(manager)
+
+    # The saved fix pair was applied after the main query
+    assert calls == ["solo-query", "https://open.spotify.com/track/old|https://youtu.be/xyz"]
+    with session_factory() as db:
+        recorded = db.scalar(
+            select(DownloadFix).where(DownloadFix.song == "Artist - Missing Song")
+        )
+        assert recorded is not None
+        assert recorded.watch_id == watch_id
+        assert recorded.youtube_url is None
+    engine.dispose()
+
+
+def test_fixes_missing_id_404(client: TestClient, admin_headers: dict[str, str]) -> None:
+    assert client.get("/api/v1/downloads/fixes", headers=admin_headers).json() == []
+    assert (
+        client.patch(
+            "/api/v1/downloads/fixes/999",
+            json={"youtube_url": "https://youtu.be/abc"},
+            headers=admin_headers,
+        ).status_code
+        == 404
+    )
+    assert client.delete("/api/v1/downloads/fixes/999", headers=admin_headers).status_code == 404
+
+
+def test_fix_update_flow(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    source: Source,
+    db_session,
+) -> None:
+    watch = client.post(
+        WATCHES_URL,
+        json={"name": "W", "query": "q", "source_id": source.id},
+        headers=admin_headers,
+    ).json()
+    db_session.add(
+        DownloadFix(watch_id=watch["id"], song="Artist - Lost", error="No results")
+    )
+    db_session.commit()
+
+    listed = client.get("/api/v1/downloads/fixes", headers=admin_headers).json()
+    assert len(listed) == 1
+    assert listed[0]["song"] == "Artist - Lost"
+    assert listed[0]["watch_name"] == "W"
+
+    fix_id = listed[0]["id"]
+    patched = client.patch(
+        f"/api/v1/downloads/fixes/{fix_id}",
+        json={
+            "spotify_url": "https://open.spotify.com/track/x",
+            "youtube_url": "https://youtu.be/y",
+        },
+        headers=admin_headers,
+    )
+    assert patched.status_code == 200
+    assert patched.json()["youtube_url"] == "https://youtu.be/y"
+
+    assert (
+        client.delete(f"/api/v1/downloads/fixes/{fix_id}", headers=admin_headers).status_code
+        == 204
+    )
+    assert client.get("/api/v1/downloads/fixes", headers=admin_headers).json() == []
 
 
 def test_spotdl_options_roundtrip(client: TestClient, admin_headers: dict[str, str]) -> None:

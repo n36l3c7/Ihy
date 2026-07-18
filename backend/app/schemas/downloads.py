@@ -54,6 +54,8 @@ class SpotdlOptions(BaseModel):
     lyrics_providers: str = Field(default="", max_length=200)
     # Output
     output_template: str = Field(default="", max_length=300)
+    # "album" avoids duplicates when a song exists both as single and album track
+    album_type: Literal["album", "single", "compilation"] | None = None
     overwrite: Literal["skip", "metadata", "force"] | None = None
     restrict: Literal["strict", "ascii"] | None = None
     max_filename_length: int | None = Field(default=None, ge=10, le=255)
@@ -72,6 +74,24 @@ class SpotdlOptions(BaseModel):
 
 class SpotifyResolveRead(BaseModel):
     name: str
+
+
+class FixRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    watch_id: int
+    song: str
+    spotify_url: str | None
+    youtube_url: str | None
+    error: str | None
+    created_at: datetime
+    watch_name: str | None = None
+
+
+class FixUpdate(BaseModel):
+    spotify_url: str | None = Field(default=None, max_length=500)
+    youtube_url: str | None = Field(default=None, max_length=500)
 
 
 class SpotifyArtistRead(BaseModel):

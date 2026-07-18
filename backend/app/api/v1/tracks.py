@@ -8,7 +8,7 @@ from app.api.deps import AdminUserDep, CurrentUserDep, DbDep, MediaUserDep
 from app.schemas.common import Page
 from app.schemas.library import TrackRead
 from app.schemas.lyrics import LyricsRead
-from app.schemas.tags import BatchTagsRequest, BatchTagsResult, TrackTagsUpdate
+from app.schemas.tags import BatchTagsRequest, BatchTagsResult, TrackFileTags, TrackTagsUpdate
 from app.services import catalog, tag_editor
 from app.services import lyrics as lyrics_service
 from app.services.catalog import TrackSort
@@ -68,6 +68,24 @@ def batch_edit_tags(payload: BatchTagsRequest, db: DbDep, _admin: AdminUserDep) 
             tracks.append(track)
     updated, tag_errors = tag_editor.batch_update_tags(db, tracks, changes)
     return BatchTagsResult(updated=updated, errors=errors + tag_errors)
+
+
+@router.get("/{track_id}/tags/file", response_model=TrackFileTags)
+def read_file_tags(track_id: int, db: DbDep, _admin: AdminUserDep) -> TrackFileTags:
+    """All tag fields as currently stored in the audio file."""
+    track = catalog.get_track(db, track_id)
+    if track is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+    if not Path(track.file_path).is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Audio file not available"
+        )
+    tags = tag_editor.read_full_tags(Path(track.file_path))
+    if tags is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Unreadable audio file"
+        )
+    return TrackFileTags(**tags)
 
 
 @router.patch("/{track_id}/tags", response_model=TrackRead)

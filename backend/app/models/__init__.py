@@ -3,7 +3,7 @@ which Alembic autogenerate and Base.metadata.create_all rely on."""
 
 from app.db.base import Base
 from app.models.app_setting import AppSetting
-from app.models.downloads import DownloadWatch
+from app.models.downloads import DownloadFix, DownloadWatch
 from app.models.interactions import Favorite, PlayHistory
 from app.models.library import (
     Album,
@@ -23,6 +23,7 @@ __all__ = [
     "AppSetting",
     "Artist",
     "Base",
+    "DownloadFix",
     "DownloadWatch",
     "Favorite",
     "Genre",
