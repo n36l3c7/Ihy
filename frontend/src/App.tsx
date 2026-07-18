@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, RouterProvider, useRouteError } from "re
 
 import { Layout } from "./components/Layout";
 import { BackupPage } from "./features/admin/BackupPage";
+import { HealthPage } from "./features/admin/HealthPage";
 import { LibrarySettingsPage } from "./features/admin/LibrarySettingsPage";
 import { SettingsLayout } from "./features/admin/SettingsLayout";
 import { SourcesPage } from "./features/admin/SourcesPage";
@@ -89,6 +90,7 @@ const router = createBrowserRouter([
               { index: true, element: <Navigate to="/settings/sources" replace /> },
               { path: "sources", element: <SourcesPage /> },
               { path: "library", element: <LibrarySettingsPage /> },
+              { path: "health", element: <HealthPage /> },
               {
                 path: "users",
                 element: <UsersLayout />,

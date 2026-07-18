@@ -3,9 +3,11 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.services import app_settings
 from app.services.downloads import download_manager
+from app.workers import watcher
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,8 @@ def start_scheduler() -> None:
     _scheduler = BackgroundScheduler()
     _scheduler.start()
     reschedule_download_job()
+    if get_settings().watch_folders:
+        watcher.start_watchers()
 
 
 def reschedule_download_job() -> None:
@@ -52,6 +56,7 @@ def reschedule_download_job() -> None:
 
 def shutdown_scheduler() -> None:
     global _scheduler
+    watcher.stop_watchers()
     if _scheduler is not None:
         _scheduler.shutdown(wait=False)
         _scheduler = None

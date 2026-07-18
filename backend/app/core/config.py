@@ -28,6 +28,8 @@ class Settings(BaseSettings):
 
     # Background jobs (disabled in tests)
     enable_scheduler: bool = True
+    # Watch source folders and scan automatically when audio files change
+    watch_folders: bool = True
 
     # spotdl executable; kept in its own environment because its
     # dependencies conflict with the API's (fastapi pin)

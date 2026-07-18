@@ -2,10 +2,12 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import AdminUserDep, DbDep
+from app.core.config import get_settings
 from app.models.library import Source
 from app.schemas.source import SourceCreate, SourceRead, SourceUpdate
 from app.services import sources as sources_service
 from app.services.sources import DuplicateSourcePathError, InvalidSourcePathError
+from app.workers import watcher
 
 router = APIRouter()
 
@@ -36,6 +38,8 @@ def create_source(payload: SourceCreate, db: DbDep, _admin: AdminUserDep) -> Sou
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
     except DuplicateSourcePathError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
+    if get_settings().enable_scheduler and get_settings().watch_folders:
+        watcher.start_watchers()  # refresh the watched folder set
     return _to_read(source, 0)
 
 
@@ -64,3 +68,5 @@ def delete_source(source_id: int, db: DbDep, _admin: AdminUserDep) -> None:
     """Delete a source and its tracks from the library. Files on disk are untouched."""
     source = _get_source_or_404(db, source_id)
     sources_service.delete(db, source)
+    if get_settings().enable_scheduler and get_settings().watch_folders:
+        watcher.start_watchers()

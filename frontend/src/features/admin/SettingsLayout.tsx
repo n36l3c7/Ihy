@@ -1,4 +1,11 @@
-import { DatabaseBackup, DownloadCloud, FolderCog, SlidersHorizontal, Users } from "lucide-react";
+import {
+  DatabaseBackup,
+  DownloadCloud,
+  FolderCog,
+  HeartPulse,
+  SlidersHorizontal,
+  Users,
+} from "lucide-react";
 import { Navigate, NavLink, Outlet } from "react-router";
 
 import { useAuthStore } from "../../stores/authStore";
@@ -6,6 +13,7 @@ import { useAuthStore } from "../../stores/authStore";
 const SETTINGS_NAV = [
   { to: "/settings/sources", label: "Sources", icon: FolderCog },
   { to: "/settings/library", label: "Library", icon: SlidersHorizontal },
+  { to: "/settings/health", label: "Health", icon: HeartPulse },
   { to: "/settings/users", label: "Users", icon: Users },
   { to: "/settings/spotdl", label: "SpotDL", icon: DownloadCloud },
   { to: "/settings/backup", label: "Backup", icon: DatabaseBackup },

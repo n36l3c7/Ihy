@@ -1,5 +1,5 @@
 import { api } from "./http";
-import type { LibrarySettings, ScanStatus, Source, User } from "./types";
+import type { LibrarySettings, ScanStatus, Source, Track, User } from "./types";
 
 export const getSources = () => api<Source[]>("/sources");
 
@@ -23,6 +23,18 @@ export interface LoudnessStatus {
 }
 
 export const getLoudnessStatus = () => api<LoudnessStatus>("/library/loudness");
+
+export const getDuplicates = () => api<Track[][]>("/library/duplicates");
+
+export interface BrokenFilesReport {
+  broken: Track[];
+  offline_sources: { id: number; name: string; path: string }[];
+}
+
+export const getBrokenFiles = () => api<BrokenFilesReport>("/library/broken");
+
+export const cleanupBrokenFiles = () =>
+  api<{ removed: number }>("/library/broken/cleanup", { method: "POST" });
 
 export const startLoudnessAnalysis = () =>
   api<LoudnessStatus>("/library/loudness", { method: "POST" });

@@ -10,6 +10,7 @@ from app.models.library import Source
 from app.schemas.library import TrackRead
 from app.schemas.scan import ScanResultRead, ScanStatusRead
 from app.services import browse as browse_service
+from app.services import library_health
 from app.services.browse import InvalidBrowsePathError
 from app.services.loudness import ffmpeg_available, loudness_analyzer
 from app.services.scan_manager import scan_manager
@@ -112,3 +113,44 @@ def start_loudness_analysis(_admin: AdminUserDep) -> LoudnessStatusRead:
             status_code=status.HTTP_409_CONFLICT, detail="An analysis is already running"
         )
     return _loudness_status()
+
+
+@router.get("/duplicates", response_model=list[list[TrackRead]])
+def list_duplicates(db: DbDep, _admin: AdminUserDep) -> list[list]:
+    """Groups of tracks with identical title and artists, best copy first."""
+    return library_health.find_duplicates(db)
+
+
+class SourceOfflineRead(BaseModel):
+    id: int
+    name: str
+    path: str
+
+
+class BrokenFilesRead(BaseModel):
+    broken: list[TrackRead]
+    offline_sources: list[SourceOfflineRead]
+
+
+@router.get("/broken", response_model=BrokenFilesRead)
+def list_broken(db: DbDep, _admin: AdminUserDep) -> BrokenFilesRead:
+    """Tracks whose audio file is missing from disk (unreachable sources
+    are listed separately, their tracks are not flagged)."""
+    broken, offline = library_health.find_broken(db)
+    return BrokenFilesRead(
+        broken=broken,
+        offline_sources=[
+            SourceOfflineRead(id=source.id, name=source.name, path=source.path)
+            for source in offline
+        ],
+    )
+
+
+class BrokenCleanupResult(BaseModel):
+    removed: int
+
+
+@router.post("/broken/cleanup", response_model=BrokenCleanupResult)
+def cleanup_broken(db: DbDep, _admin: AdminUserDep) -> BrokenCleanupResult:
+    """Delete the library entries of missing files."""
+    return BrokenCleanupResult(removed=library_health.cleanup_broken(db))
