@@ -70,6 +70,13 @@
   --color-zinc-700: #232327;
 }
 
+/* Accent buttons pair bg-emerald-* with text-white; when the accent itself
+   is white/grey the label must flip to dark ink for contrast */
+:root[data-theme="glitch"],
+:root[data-theme="monochrome"] {
+  --color-white: #0a0a0c;
+}
+
 :root[data-theme="glitch"] .app-logo {
   filter: drop-shadow(2px 0 0 rgba(255, 61, 129, 0.7))
     drop-shadow(-2px 0 0 rgba(0, 229, 255, 0.7))
