@@ -19,9 +19,14 @@ services:
       IHY_SSL_SAN: "${IHY_SSL_SAN:-}"
     volumes:
       - ihy-data:/data
-      # Mount your music library here. Remote sources (SMB/NFS) should be
-      # mounted on the host first, then passed through like any local path.
-      # - /path/to/your/music:/music
+      # Mount your music in a docker-compose.override.yml next to this file
+      # (gitignored, merged automatically by Compose), e.g.:
+      #   services:
+      #     ihy:
+      #       volumes:
+      #         - /path/to/your/music:/music
+      # Remote sources (SMB/NFS) should be mounted on the host first,
+      # then passed through like any local path.
     restart: unless-stopped
 
 volumes:

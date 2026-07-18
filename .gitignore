@@ -19,6 +19,9 @@ dist/
 .env.*
 !.env.example
 
+# Per-host deployment tweaks (music mounts, ports, ...)
+docker-compose.override.yml
+
 # Application data
 data/
 *.db
