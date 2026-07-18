@@ -1,4 +1,6 @@
+import html
 import logging
+import re
 import time
 
 import httpx
@@ -7,6 +9,8 @@ logger = logging.getLogger(__name__)
 
 TOKEN_URL = "https://accounts.spotify.com/api/token"
 SEARCH_URL = "https://api.spotify.com/v1/search"
+
+_OG_TITLE_RE = re.compile(r'<meta property="og:title" content="([^"]+)"')
 
 _token_cache: dict = {"client_id": None, "token": None, "expires_at": 0.0}
 
@@ -39,6 +43,25 @@ def _get_token(client_id: str, client_secret: str) -> str:
         }
     )
     return _token_cache["token"]
+
+
+def resolve_title(url: str) -> str | None:
+    """Extract the artist/album name from a public open.spotify.com page.
+    Works without API credentials — used as the no-credentials fallback."""
+    try:
+        response = httpx.get(
+            url,
+            timeout=10,
+            follow_redirects=True,
+            headers={"User-Agent": "Mozilla/5.0 (Ihy self-hosted music server)"},
+        )
+    except httpx.HTTPError as exc:
+        logger.warning("Spotify page fetch failed: %s", exc)
+        return None
+    if response.status_code != 200:
+        return None
+    match = _OG_TITLE_RE.search(response.text)
+    return html.unescape(match.group(1)) if match else None
 
 
 def search_artists(

@@ -1,4 +1,5 @@
 import logging
+import re
 import shlex
 import shutil
 import subprocess
@@ -19,11 +20,13 @@ from app.services.scan_manager import scan_manager
 
 logger = logging.getLogger(__name__)
 
-SPOTDL_TIMEOUT_SECONDS = 3600
 LOG_MAX_LINES = 500
+DEFAULT_OUTPUT_TEMPLATE = "{artist}/{album}/{title}.{output-ext}"
 
-# runner(query, output_dir, options) -> (success, output tail)
-SpotdlRunner = Callable[[str, Path, dict], "tuple[bool, str]"]
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+
+# runner(query, output_dir, options, on_line) -> (success, output tail)
+SpotdlRunner = Callable[[str, Path, dict, Callable[[str], None]], "tuple[bool, str]"]
 
 
 def _spotdl_executable() -> str | None:
@@ -35,19 +38,47 @@ def spotdl_available() -> bool:
     return _spotdl_executable() is not None
 
 
-def run_spotdl(query: str, output_dir: Path, options: dict) -> tuple[bool, str]:
-    """Download a query with the spotdl CLI. Existing files are skipped by spotdl."""
-    executable = _spotdl_executable()
-    if executable is None:
-        return False, "spotdl executable not found"
-    template = str(output_dir / "{artist}" / "{album}" / "{title}.{output-ext}")
-    command = [executable, "download", query, "--output", template]
+def _clean_output_line(raw: str) -> str:
+    """Progress bars rewrite lines with \\r and ANSI codes; keep the final text."""
+    segment = raw.split("\r")[-1]
+    return _ANSI_RE.sub("", segment).rstrip()
+
+
+def _build_command(executable: str, query: str, output_dir: Path, options: dict) -> list[str]:
+    template = str(options.get("output_template") or "").strip() or DEFAULT_OUTPUT_TEMPLATE
+    command = [executable, "download", query, "--output", str(output_dir / template)]
     if options.get("output_format"):
         command += ["--format", str(options["output_format"])]
     if options.get("bitrate"):
         command += ["--bitrate", str(options["bitrate"])]
     if options.get("threads"):
         command += ["--threads", str(options["threads"])]
+    if options.get("audio_providers"):
+        command += ["--audio", *str(options["audio_providers"]).split()]
+    if options.get("lyrics_providers"):
+        command += ["--lyrics", *str(options["lyrics_providers"]).split()]
+    if options.get("overwrite"):
+        command += ["--overwrite", str(options["overwrite"])]
+    if options.get("restrict"):
+        command += ["--restrict", str(options["restrict"])]
+    if options.get("max_filename_length"):
+        command += ["--max-filename-length", str(options["max_filename_length"])]
+    for flag, key in (
+        ("--sponsor-block", "sponsor_block"),
+        ("--playlist-numbering", "playlist_numbering"),
+        ("--generate-lrc", "generate_lrc"),
+        ("--print-errors", "print_errors"),
+        ("--scan-for-songs", "scan_for_songs"),
+        ("--fetch-albums", "fetch_albums"),
+    ):
+        if options.get(key):
+            command.append(flag)
+    if options.get("proxy"):
+        command += ["--proxy", str(options["proxy"])]
+    if options.get("cookie_file"):
+        command += ["--cookie-file", str(options["cookie_file"])]
+    if options.get("yt_dlp_args"):
+        command += ["--yt-dlp-args", str(options["yt_dlp_args"])]
     if options.get("client_id") and options.get("client_secret"):
         command += [
             "--client-id",
@@ -57,16 +88,39 @@ def run_spotdl(query: str, output_dir: Path, options: dict) -> tuple[bool, str]:
         ]
     if options.get("extra_args"):
         command += shlex.split(str(options["extra_args"]))
+    return command
+
+
+def run_spotdl(
+    query: str, output_dir: Path, options: dict, on_line: Callable[[str], None]
+) -> tuple[bool, str]:
+    """Run the spotdl CLI, streaming output line by line as it happens.
+    Existing files are skipped by spotdl itself."""
+    executable = _spotdl_executable()
+    if executable is None:
+        return False, "spotdl executable not found"
+    command = _build_command(executable, query, output_dir, options)
     try:
-        completed = subprocess.run(
-            command, capture_output=True, text=True, timeout=SPOTDL_TIMEOUT_SECONDS, check=False
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
         )
-    except subprocess.TimeoutExpired:
-        return False, "spotdl timed out"
     except OSError as exc:
         return False, f"Failed to launch spotdl: {exc}"
-    output = (completed.stdout or "") + (completed.stderr or "")
-    return completed.returncode == 0, output[-2000:]
+    tail: deque[str] = deque(maxlen=60)
+    assert process.stdout is not None
+    for raw_line in process.stdout:
+        line = _clean_output_line(raw_line)
+        if line:
+            on_line(line)
+            tail.append(line)
+    returncode = process.wait()
+    return returncode == 0, "\n".join(tail)
 
 
 def _utcnow() -> datetime:
@@ -124,21 +178,26 @@ class DownloadManager:
                         .order_by(DownloadWatch.id)
                     )
                 )
+                scan_pending = False
                 for watch in watches:
                     self.current_watch = watch.name
                     self._log.append(f"=== {watch.name} ({watch.query})")
-                    success, detail = self._runner(watch.query, Path(watch.source.path), options)
-                    for line in detail.splitlines():
-                        if line.strip():
-                            self._log.append(line.rstrip())
+                    success, detail = self._runner(
+                        watch.query, Path(watch.source.path), options, self._log.append
+                    )
                     self._log.append(f"=== {watch.name}: {'ok' if success else 'FAILED'}")
                     watch.last_run_at = _utcnow()
                     watch.last_status = "ok" if success else "error"
                     watch.last_error = None if success else detail[-500:]
                     db.commit()
                     processed += 1
-            if processed > 0:
-                self._log.append("Triggering library scan")
+                    # Scan right away so finished downloads show up immediately
+                    if self._start_scan():
+                        self._log.append("Library scan started")
+                    else:
+                        self._log.append("Library scan busy — will retry at the end")
+                        scan_pending = True
+            if processed > 0 and scan_pending:
                 self._start_scan()
             self._log.append(f"[{_utcnow():%H:%M:%S}] Watch check finished")
         except Exception:

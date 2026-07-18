@@ -11,6 +11,7 @@ from app.schemas.downloads import (
     DownloadLogRead,
     DownloadStatusRead,
     SpotifyArtistRead,
+    SpotifyResolveRead,
     WatchCreate,
     WatchRead,
     WatchUpdate,
@@ -95,6 +96,26 @@ def spotify_search(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from None
+
+
+@router.get("/spotify/resolve", response_model=SpotifyResolveRead)
+def spotify_resolve(
+    _admin: AdminUserDep,
+    url: Annotated[str, Query(min_length=10, max_length=500)],
+) -> SpotifyResolveRead:
+    """Resolve the display name of a pasted Spotify URL from its public page.
+    Works without API credentials."""
+    if not url.startswith("https://open.spotify.com/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Not an open.spotify.com URL",
+        )
+    name = spotify_service.resolve_title(url)
+    if name is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Could not resolve the page"
+        )
+    return SpotifyResolveRead(name=name)
 
 
 @router.get("/log", response_model=DownloadLogRead)

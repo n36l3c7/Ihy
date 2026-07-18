@@ -18,6 +18,21 @@ DEFAULT_SPOTDL_OPTIONS: dict = {
     "extra_args": "",
     "client_id": "",
     "client_secret": "",
+    "audio_providers": "",
+    "lyrics_providers": "",
+    "output_template": "",
+    "overwrite": None,
+    "restrict": None,
+    "max_filename_length": None,
+    "sponsor_block": False,
+    "playlist_numbering": False,
+    "generate_lrc": False,
+    "print_errors": True,
+    "scan_for_songs": False,
+    "fetch_albums": False,
+    "proxy": "",
+    "cookie_file": "",
+    "yt_dlp_args": "",
 }
 
 

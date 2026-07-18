@@ -132,8 +132,9 @@ def test_manager_runs_enabled_watches_and_triggers_scan(tmp_path: Path) -> None:
     calls: list[tuple[str, str]] = []
     scans: list[bool] = []
 
-    def fake_runner(query: str, output_dir: Path, _options: dict) -> tuple[bool, str]:
+    def fake_runner(query: str, output_dir: Path, _options: dict, on_line) -> tuple[bool, str]:
         calls.append((query, str(output_dir)))
+        on_line("boom output")
         return (query == "good-query", "boom output")
 
     manager = DownloadManager(
@@ -150,7 +151,7 @@ def test_manager_runs_enabled_watches_and_triggers_scan(tmp_path: Path) -> None:
 
     assert [query for query, _dir in calls] == ["good-query", "bad-query"]
     assert all(directory == str(music_dir) for _q, directory in calls)
-    assert scans == [True]
+    assert scans == [True, True]  # one scan per completed watch
     assert manager.last_finished_at is not None
     assert any("boom output" in line for line in manager.log_lines)
     assert any("Bad" in line and "FAILED" in line for line in manager.log_lines)
@@ -249,6 +250,35 @@ def test_spotify_search_with_credentials(
     )
     assert response.status_code == 200
     assert response.json()[0]["name"] == "Result for daft"
+
+
+def test_spotify_resolve(
+    client: TestClient, admin_headers: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.services.spotify.resolve_title", lambda url: "Daft Punk")
+    response = client.get(
+        "/api/v1/downloads/spotify/resolve?url=https://open.spotify.com/artist/4tZ",
+        headers=admin_headers,
+    )
+    assert response.status_code == 200
+    assert response.json() == {"name": "Daft Punk"}
+
+    bad = client.get(
+        "/api/v1/downloads/spotify/resolve?url=https://example.com/whatever",
+        headers=admin_headers,
+    )
+    assert bad.status_code == 400
+
+
+def test_spotify_resolve_not_found(
+    client: TestClient, admin_headers: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.services.spotify.resolve_title", lambda url: None)
+    response = client.get(
+        "/api/v1/downloads/spotify/resolve?url=https://open.spotify.com/artist/nope",
+        headers=admin_headers,
+    )
+    assert response.status_code == 404
 
 
 @pytest.fixture(autouse=True)

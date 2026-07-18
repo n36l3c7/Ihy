@@ -58,6 +58,21 @@ export interface SpotdlOptions {
   extra_args: string;
   client_id: string;
   client_secret: string;
+  audio_providers: string;
+  lyrics_providers: string;
+  output_template: string;
+  overwrite: "skip" | "metadata" | "force" | null;
+  restrict: "strict" | "ascii" | null;
+  max_filename_length: number | null;
+  sponsor_block: boolean;
+  playlist_numbering: boolean;
+  generate_lrc: boolean;
+  print_errors: boolean;
+  scan_for_songs: boolean;
+  fetch_albums: boolean;
+  proxy: string;
+  cookie_file: string;
+  yt_dlp_args: string;
 }
 
 export interface SpotifyArtist {
@@ -75,5 +90,8 @@ export const updateSpotdlOptions = (options: SpotdlOptions) =>
 
 export const searchSpotifyArtists = (q: string) =>
   api<SpotifyArtist[]>(`/downloads/spotify/search?q=${encodeURIComponent(q)}`);
+
+export const resolveSpotifyUrl = (url: string) =>
+  api<{ name: string }>(`/downloads/spotify/resolve?url=${encodeURIComponent(url)}`);
 
 export const getDownloadLog = () => api<{ lines: string[] }>("/downloads/log");

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DownloadCloud } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   getDownloadLog,
@@ -28,8 +28,14 @@ export function SpotdlActivityPage() {
   const log = useQuery({
     queryKey: ["download-log"],
     queryFn: getDownloadLog,
-    refetchInterval: running ? 2000 : 15_000,
+    refetchInterval: running ? 1000 : 15_000,
   });
+
+  // Follow the log like a terminal: stick to the bottom as new lines arrive
+  const logRef = useRef<HTMLPreElement>(null);
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [log.data]);
 
   const settings = useQuery({
     queryKey: ["download-settings"],
@@ -132,9 +138,15 @@ export function SpotdlActivityPage() {
       )}
 
       <div className="rounded-lg border border-zinc-800 p-4">
-        <p className="mb-2 text-sm font-medium text-zinc-300">CLI log</p>
+        <p className="mb-2 text-sm font-medium text-zinc-300">
+          CLI log
+          {running && <span className="ml-2 animate-pulse text-xs text-emerald-500">● live</span>}
+        </p>
         {log.data && log.data.lines.length > 0 ? (
-          <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded bg-zinc-950 p-3 font-mono text-xs leading-5 text-zinc-400">
+          <pre
+            ref={logRef}
+            className="h-[calc(100vh-30rem)] min-h-72 overflow-y-auto whitespace-pre-wrap rounded bg-zinc-950 p-3 font-mono text-xs leading-5 text-zinc-400"
+          >
             {log.data.lines.join("\n")}
           </pre>
         ) : (

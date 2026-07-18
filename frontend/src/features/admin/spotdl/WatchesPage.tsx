@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Music2, Plus, Trash2 } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 
 import { getSources } from "../../../api/admin";
 import {
   createWatch,
   deleteWatch,
+  getSpotdlOptions,
   getWatches,
+  resolveSpotifyUrl,
   searchSpotifyArtists,
   updateWatch,
 } from "../../../api/downloads";
@@ -22,18 +24,39 @@ export function WatchesPage() {
   const query = useDebouncedValue(search, 400);
   const [manualName, setManualName] = useState("");
   const [manualQuery, setManualQuery] = useState("");
+  const debouncedManualQuery = useDebouncedValue(manualQuery, 500);
   const [error, setError] = useState<string | null>(null);
 
   const sources = useQuery({ queryKey: ["sources"], queryFn: getSources });
   const watches = useQuery({ queryKey: ["download-watches"], queryFn: getWatches });
+  const options = useQuery({ queryKey: ["spotdl-options"], queryFn: getSpotdlOptions });
+  const hasCredentials = Boolean(options.data?.client_id && options.data?.client_secret);
 
   const spotifySearch = useQuery({
     queryKey: ["spotify-search", query],
     queryFn: () => searchSpotifyArtists(query),
-    enabled: query.trim().length >= 2,
+    enabled: hasCredentials && query.trim().length >= 2,
     retry: false,
     staleTime: 60_000,
   });
+
+  // Pasting a Spotify URL in the manual form resolves the display name
+  // from the public page — no API credentials needed.
+  useEffect(() => {
+    const url = debouncedManualQuery.trim();
+    if (!url.startsWith("https://open.spotify.com/")) return;
+    let cancelled = false;
+    resolveSpotifyUrl(url)
+      .then((resolved) => {
+        if (!cancelled) {
+          setManualName((current) => current || resolved.name);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedManualQuery]);
 
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ["download-watches"] });
   const onError = (err: unknown) =>
@@ -99,13 +122,24 @@ export function WatchesPage() {
             ))}
           </select>
           <input
-            className={`${inputClass} min-w-64 flex-1`}
+            className={`${inputClass} min-w-64 flex-1 disabled:cursor-not-allowed disabled:opacity-50`}
             type="search"
-            placeholder="Search artists on Spotify..."
+            placeholder={
+              hasCredentials
+                ? "Search artists on Spotify..."
+                : "Search disabled — Spotify API credentials missing"
+            }
             value={search}
             onChange={(event) => setSearch(event.target.value)}
+            disabled={!hasCredentials}
           />
         </div>
+        {!hasCredentials && (
+          <p className="mb-3 text-xs text-amber-400">
+            Real-time search needs Spotify API credentials (SpotDL → Settings). No credentials?
+            Paste an artist URL from open.spotify.com below — the name fills in automatically.
+          </p>
+        )}
 
         {spotifySearch.isError && (
           <p className="mb-2 text-xs text-amber-400">
@@ -157,23 +191,23 @@ export function WatchesPage() {
           </ul>
         )}
 
-        <details className="text-xs text-zinc-500">
-          <summary className="cursor-pointer select-none hover:text-zinc-300">
-            Add manually (Spotify URL or free search)
-          </summary>
-          <form onSubmit={handleManualAdd} className="mt-3 flex flex-wrap gap-3">
+        <div className="border-t border-zinc-800 pt-3">
+          <p className="mb-2 text-xs text-zinc-500">
+            Add by URL (name resolves automatically) or free search text
+          </p>
+          <form onSubmit={handleManualAdd} className="flex flex-wrap gap-3">
+            <input
+              className={`${inputClass} min-w-56 flex-1`}
+              placeholder="https://open.spotify.com/artist/... or search text"
+              value={manualQuery}
+              onChange={(event) => setManualQuery(event.target.value)}
+              required
+            />
             <input
               className={`${inputClass} w-40 flex-none`}
               placeholder="Display name"
               value={manualName}
               onChange={(event) => setManualName(event.target.value)}
-              required
-            />
-            <input
-              className={`${inputClass} min-w-56 flex-1`}
-              placeholder="Spotify URL or search text"
-              value={manualQuery}
-              onChange={(event) => setManualQuery(event.target.value)}
               required
             />
             <button
@@ -184,7 +218,7 @@ export function WatchesPage() {
               Add
             </button>
           </form>
-        </details>
+        </div>
       </div>
 
       {error && <p className="mb-4 text-sm text-red-400">{error}</p>}

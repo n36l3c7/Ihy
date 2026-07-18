@@ -49,6 +49,29 @@ class SpotdlOptions(BaseModel):
     extra_args: str = Field(default="", max_length=500)
     client_id: str = Field(default="", max_length=100)
     client_secret: str = Field(default="", max_length=100)
+    # Providers (space separated, e.g. "youtube-music youtube")
+    audio_providers: str = Field(default="", max_length=200)
+    lyrics_providers: str = Field(default="", max_length=200)
+    # Output
+    output_template: str = Field(default="", max_length=300)
+    overwrite: Literal["skip", "metadata", "force"] | None = None
+    restrict: Literal["strict", "ascii"] | None = None
+    max_filename_length: int | None = Field(default=None, ge=10, le=255)
+    # Behavior toggles
+    sponsor_block: bool = False
+    playlist_numbering: bool = False
+    generate_lrc: bool = False
+    print_errors: bool = True
+    scan_for_songs: bool = False
+    fetch_albums: bool = False
+    # Network / advanced
+    proxy: str = Field(default="", max_length=300)
+    cookie_file: str = Field(default="", max_length=500)
+    yt_dlp_args: str = Field(default="", max_length=500)
+
+
+class SpotifyResolveRead(BaseModel):
+    name: str
 
 
 class SpotifyArtistRead(BaseModel):
