@@ -4,19 +4,15 @@ A self-hosted web application for streaming and managing your local music librar
 
 ## Features
 
-### MVP (in development)
-
-- **Music player** — play/pause, next/previous, shuffle, repeat, playback queue
-- **Playlists and favorites** — per-user playlists and "liked" tracks
-- **Library browsing** — automatic organization by tracks, artists, albums, and genres
-- **Tag editor** — view and edit metadata (ID3 tags, cover art, year, genre, ...) for single files or in batch
-- **Media sources** — local folders and remote storage (SMB/NFS via host mounts)
-- **Multi-user** — shared music library with per-user playlists, favorites, and listening history
-
-### Roadmap
-
-- **spotdl integration** — watch artists/albums and download new releases automatically via scheduled background jobs
-- **Lyrics** — automatic lyrics fetching (Genius or other open APIs)
+- **Music player** — play/pause, next/previous, shuffle, repeat, seeking, OS media keys (MediaSession), playback queue
+- **Playlists and favorites** — per-user playlists with drag-and-drop reordering, "liked" tracks, listening history
+- **Library browsing** — tracks, artists, albums and genres with search, filters, multi-select, bulk actions and a right-click context menu
+- **Tag editor** — view and edit metadata (title, artists, album, genres, year, cover art) for single files or in batch; changes are written to the files and re-synced to the library
+- **Multi-artist support** — configurable separators split tags like "ACDC/Kiss" into distinct artists
+- **Lyrics** — embedded lyrics tags or automatic fetching from lrclib.net, cached locally
+- **spotdl integration** — watch artists/albums and download new releases automatically on a configurable schedule
+- **Media sources** — local folders and remote storage (SMB/NFS via host mounts) with incremental scanning
+- **Multi-user** — shared music library with per-user playlists, favorites and history; admin-managed accounts
 
 ## Tech stack
 
