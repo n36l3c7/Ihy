@@ -6,6 +6,7 @@ from app.api.deps import CurrentUserDep, DbDep
 from app.schemas.common import Page
 from app.schemas.history import PlayCreate, PlayHistoryRead
 from app.services import catalog, user_library
+from app.services.scrobbler import scrobble_async
 
 router = APIRouter()
 
@@ -16,6 +17,7 @@ def record_play(payload: PlayCreate, db: DbDep, user: CurrentUserDep) -> None:
     if track is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
     user_library.record_play(db, user, track)
+    scrobble_async(user.id, track.id)
 
 
 @router.get("", response_model=Page[PlayHistoryRead])

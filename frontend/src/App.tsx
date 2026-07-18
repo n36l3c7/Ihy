@@ -31,6 +31,8 @@ import { LibraryHubPage } from "./features/library/LibraryHubPage";
 import { StatsPage } from "./features/library/StatsPage";
 import { TracksPage } from "./features/library/TracksPage";
 import { PlaylistPage } from "./features/playlists/PlaylistPage";
+import { SmartPlaylistPage } from "./features/playlists/SmartPlaylistPage";
+import { ScrobblingPage } from "./features/settings/ScrobblingPage";
 
 function RouteError() {
   const error = useRouteError();
@@ -76,6 +78,8 @@ const router = createBrowserRouter([
           { path: "/bookmarks", element: <BookmarksPage /> },
           { path: "/stats", element: <StatsPage /> },
           { path: "/playlists/:playlistId", element: <PlaylistPage /> },
+          { path: "/smart/:smartId", element: <SmartPlaylistPage /> },
+          { path: "/scrobbling", element: <ScrobblingPage /> },
           {
             path: "/settings",
             element: <SettingsLayout />,

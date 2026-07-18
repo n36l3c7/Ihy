@@ -11,11 +11,14 @@ import {
   Mic2,
   Music2,
   Plus,
+  Radio,
   Settings,
+  Sparkles,
   Tags,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 
+import { getSmartPlaylists } from "../../api/smartPlaylists";
 import { createPlaylist, getPlaylists } from "../../api/userLibrary";
 import { useAuthStore } from "../../stores/authStore";
 
@@ -29,6 +32,7 @@ const SECTIONS: { to: string; label: string; icon: typeof Music2 }[] = [
   { to: "/history", label: "Recently played", icon: History },
   { to: "/bookmarks", label: "Bookmarks", icon: Bookmark },
   { to: "/stats", label: "Statistics", icon: ChartColumn },
+  { to: "/scrobbling", label: "Scrobbling", icon: Radio },
 ];
 
 /** Mobile entry point to everything the desktop sidebar links to. */
@@ -38,6 +42,10 @@ export function LibraryHubPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const playlists = useQuery({ queryKey: ["playlists"], queryFn: getPlaylists });
+  const smartPlaylists = useQuery({
+    queryKey: ["smart-playlists"],
+    queryFn: getSmartPlaylists,
+  });
 
   const createMutation = useMutation({
     mutationFn: () => createPlaylist("New playlist"),
@@ -113,6 +121,25 @@ export function LibraryHubPage() {
         </ul>
       ) : (
         <p className="py-4 text-sm text-zinc-500">No playlists yet.</p>
+      )}
+
+      {smartPlaylists.data && smartPlaylists.data.length > 0 && (
+        <>
+          <h2 className="mb-3 mt-8 text-lg font-semibold">Smart playlists</h2>
+          <ul className="divide-y divide-zinc-800/60">
+            {smartPlaylists.data.map((smart) => (
+              <li key={smart.id}>
+                <Link
+                  to={`/smart/${smart.id}`}
+                  className="flex items-center gap-3 py-3 text-sm text-zinc-200 transition-colors hover:text-zinc-100"
+                >
+                  <Sparkles className="h-4 w-4 shrink-0 text-emerald-500" />
+                  <span className="truncate">{smart.name}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );

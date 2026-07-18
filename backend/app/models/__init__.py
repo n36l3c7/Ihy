@@ -18,6 +18,8 @@ from app.models.library import (
 from app.models.lyrics import Lyrics
 from app.models.playlist import Playlist, PlaylistItem
 from app.models.queues import SavedQueue, SavedQueueItem
+from app.models.scrobble import ScrobbleConfig
+from app.models.smart_playlist import SmartPlaylist
 from app.models.user import User, UserRole
 
 __all__ = [
@@ -37,6 +39,8 @@ __all__ = [
     "PlaylistItem",
     "SavedQueue",
     "SavedQueueItem",
+    "ScrobbleConfig",
+    "SmartPlaylist",
     "Source",
     "Track",
     "User",

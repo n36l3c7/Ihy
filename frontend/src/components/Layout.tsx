@@ -16,8 +16,10 @@ import {
   Palette,
   Play,
   Plus,
+  Radio,
   Search,
   Settings,
+  Sparkles,
   Tags,
   Trash2,
   Upload,
@@ -25,6 +27,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 
+import { createSmartPlaylist, getSmartPlaylists } from "../api/smartPlaylists";
 import type { Playlist } from "../api/types";
 import {
   createPlaylist,
@@ -33,6 +36,7 @@ import {
   getPlaylists,
   importPlaylistFile,
 } from "../api/userLibrary";
+import { SmartPlaylistDialog } from "../features/playlists/SmartPlaylistDialog";
 import { PlayerBar } from "../features/player/PlayerBar";
 import { QueuePanel } from "../features/player/QueuePanel";
 import { seekRelative } from "../lib/playerControls";
@@ -78,9 +82,14 @@ export function Layout() {
   const [themeOpen, setThemeOpen] = useState(false);
   const [theme, setTheme] = useState(currentTheme);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [smartDialogOpen, setSmartDialogOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const playlists = useQuery({ queryKey: ["playlists"], queryFn: getPlaylists });
+  const smartPlaylists = useQuery({
+    queryKey: ["smart-playlists"],
+    queryFn: getSmartPlaylists,
+  });
 
   // Cross-tab sync first, then resume the last session unless another
   // tab is already playing (its state arrives within the handshake delay)
@@ -244,8 +253,31 @@ export function Layout() {
                 <span className="truncate">{playlist.name}</span>
               </NavLink>
             ))}
+            <div className="mb-1 mt-5 flex items-center justify-between px-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Smart playlists
+              </p>
+              <button
+                type="button"
+                onClick={() => setSmartDialogOpen(true)}
+                className="rounded-full p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                aria-label="Create smart playlist"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            {smartPlaylists.data?.map((smart) => (
+              <NavLink key={smart.id} to={`/smart/${smart.id}`} className={linkClass}>
+                <Sparkles className="h-4 w-4 shrink-0" />
+                <span className="truncate">{smart.name}</span>
+              </NavLink>
+            ))}
+            <NavLink to="/scrobbling" className={`${linkClass({ isActive: false })} mt-5`}>
+              <Radio className="h-4 w-4" />
+              Scrobbling
+            </NavLink>
             {user?.role === "admin" && (
-              <NavLink to="/settings" className={`${linkClass({ isActive: false })} mt-5`}>
+              <NavLink to="/settings" className={linkClass({ isActive: false })}>
                 <Settings className="h-4 w-4" />
                 Settings
               </NavLink>
@@ -331,6 +363,16 @@ export function Layout() {
         </button>
       </nav>
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
+      {smartDialogOpen && (
+        <SmartPlaylistDialog
+          onSave={async (payload) => {
+            const created = await createSmartPlaylist(payload);
+            void queryClient.invalidateQueries({ queryKey: ["smart-playlists"] });
+            navigate(`/smart/${created.id}`);
+          }}
+          onClose={() => setSmartDialogOpen(false)}
+        />
+      )}
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)}>
           <button
