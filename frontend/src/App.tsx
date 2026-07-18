@@ -4,6 +4,7 @@ import { Layout } from "./components/Layout";
 import { LibrarySettingsPage } from "./features/admin/LibrarySettingsPage";
 import { SettingsLayout } from "./features/admin/SettingsLayout";
 import { SourcesPage } from "./features/admin/SourcesPage";
+import { UsersPage } from "./features/admin/UsersPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { RequireAuth } from "./features/auth/RequireAuth";
 import { SetupPage } from "./features/auth/SetupPage";
@@ -43,6 +44,7 @@ const router = createBrowserRouter([
               { index: true, element: <Navigate to="/settings/sources" replace /> },
               { path: "sources", element: <SourcesPage /> },
               { path: "library", element: <LibrarySettingsPage /> },
+              { path: "users", element: <UsersPage /> },
             ],
           },
           { path: "*", element: <Navigate to="/tracks" replace /> },

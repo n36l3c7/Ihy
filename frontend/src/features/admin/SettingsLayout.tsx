@@ -23,7 +23,9 @@ export function SettingsLayout() {
         <NavLink to="/settings/library" className={tabClass}>
           Library
         </NavLink>
-        {/* Future tabs: Users */}
+        <NavLink to="/settings/users" className={tabClass}>
+          Users
+        </NavLink>
       </nav>
       <Outlet />
     </div>
