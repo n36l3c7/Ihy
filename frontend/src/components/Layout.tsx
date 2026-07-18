@@ -38,6 +38,7 @@ import {
   importPlaylistFile,
 } from "../api/userLibrary";
 import { SmartPlaylistDialog } from "../features/playlists/SmartPlaylistDialog";
+import { Logo } from "./Logo";
 import { PlayerBar } from "../features/player/PlayerBar";
 import { QueuePanel } from "../features/player/QueuePanel";
 import { initCast } from "../lib/cast";
@@ -188,7 +189,7 @@ export function Layout() {
       <div className="flex min-h-0 flex-1">
         <aside className="hidden w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/40 p-4 md:flex">
           <div className="mb-6 flex items-center gap-2 px-3">
-            <ListMusic className="h-6 w-6 text-emerald-500" />
+            <Logo className="h-7 w-7 text-emerald-500" />
             <span className="text-xl font-bold tracking-tight">Ihy</span>
           </div>
           <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">

@@ -1,9 +1,9 @@
-import { ListMusic } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { createFirstAdmin, getMe, getSetupStatus, login } from "../../api/auth";
 import { ApiError } from "../../api/http";
+import { Logo } from "../../components/Logo";
 import { useAuthStore } from "../../stores/authStore";
 import { buttonClass, inputClass } from "./LoginPage";
 
@@ -49,7 +49,7 @@ export function SetupPage() {
   return (
     <div className="flex h-screen flex-col items-center justify-center bg-zinc-950 text-zinc-100">
       <div className="mb-4 flex items-center gap-3">
-        <ListMusic className="h-10 w-10 text-emerald-500" />
+        <Logo className="h-12 w-12 text-emerald-500" />
         <h1 className="text-4xl font-bold tracking-tight">Ihy</h1>
       </div>
       <p className="mb-8 text-sm text-zinc-400">Create the admin account to get started</p>
