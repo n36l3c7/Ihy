@@ -10,6 +10,8 @@ DEFAULT_METADATA_SEPARATORS = ["/", ";"]
 DOWNLOAD_INTERVAL_KEY = "download_check_interval_hours"
 DEFAULT_DOWNLOAD_INTERVAL_HOURS = 24
 
+DOWNLOAD_CRON_KEY = "download_check_cron"
+
 SPOTDL_OPTIONS_KEY = "spotdl_options"
 DEFAULT_SPOTDL_OPTIONS: dict = {
     "output_format": None,
@@ -83,6 +85,22 @@ def get_download_interval_hours(db: Session) -> int:
 
 def set_download_interval_hours(db: Session, hours: int) -> None:
     _set_raw(db, DOWNLOAD_INTERVAL_KEY, json.dumps(hours))
+
+
+def get_download_cron(db: Session) -> str:
+    """Crontab expression for the automatic check. Empty = use the interval."""
+    raw = _get_raw(db, DOWNLOAD_CRON_KEY)
+    if raw is None:
+        return ""
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        return ""
+    return value if isinstance(value, str) else ""
+
+
+def set_download_cron(db: Session, cron: str) -> None:
+    _set_raw(db, DOWNLOAD_CRON_KEY, json.dumps(cron))
 
 
 def get_spotdl_options(db: Session) -> dict:

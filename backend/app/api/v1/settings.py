@@ -28,16 +28,34 @@ def update_library_settings(
 
 @router.get("/downloads", response_model=DownloadSettings)
 def get_download_settings(db: DbDep, _admin: AdminUserDep) -> DownloadSettings:
-    return DownloadSettings(check_interval_hours=app_settings.get_download_interval_hours(db))
+    return DownloadSettings(
+        check_interval_hours=app_settings.get_download_interval_hours(db),
+        cron=app_settings.get_download_cron(db),
+    )
 
 
 @router.put("/downloads", response_model=DownloadSettings)
 def update_download_settings(
     payload: DownloadSettings, db: DbDep, _admin: AdminUserDep
 ) -> DownloadSettings:
+    cron = payload.cron.strip()
+    if cron:
+        from apscheduler.triggers.cron import CronTrigger
+
+        try:
+            CronTrigger.from_crontab(cron)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid cron expression: {exc}",
+            ) from None
     app_settings.set_download_interval_hours(db, payload.check_interval_hours)
+    app_settings.set_download_cron(db, cron)
     reschedule_download_job()
-    return DownloadSettings(check_interval_hours=app_settings.get_download_interval_hours(db))
+    return DownloadSettings(
+        check_interval_hours=app_settings.get_download_interval_hours(db),
+        cron=app_settings.get_download_cron(db),
+    )
 
 
 @router.get("/spotdl", response_model=SpotdlOptions)

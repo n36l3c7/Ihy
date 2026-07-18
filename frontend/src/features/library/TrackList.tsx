@@ -9,7 +9,7 @@ import { addFavorite, addTrackToPlaylist, getPlaylists } from "../../api/userLib
 import { ContextMenu, contextMenuItemClass } from "../../components/ContextMenu";
 import { CoverImage } from "../../components/CoverImage";
 import { FavoriteButton } from "../../components/FavoriteButton";
-import { artistNames, formatDuration } from "../../lib/format";
+import { formatDuration } from "../../lib/format";
 import { useAuthStore } from "../../stores/authStore";
 import { selectCurrentTrack, usePlayerStore } from "../../stores/playerStore";
 import { AddToPlaylistMenu, PlaylistDropdown } from "../playlists/AddToPlaylistMenu";
@@ -299,7 +299,20 @@ export function TrackList({
                     {track.title}
                   </span>
                   <span className="block truncate text-xs text-zinc-400">
-                    {artistNames(track.artists)}
+                    {track.artists.length > 0
+                      ? track.artists.map((artist, artistIndex) => (
+                          <span key={artist.id}>
+                            {artistIndex > 0 && ", "}
+                            <Link
+                              to={`/artists/${artist.id}`}
+                              onClick={(event) => event.stopPropagation()}
+                              className="hover:text-zinc-100 hover:underline"
+                            >
+                              {artist.name}
+                            </Link>
+                          </span>
+                        ))
+                      : "Unknown artist"}
                   </span>
                 </span>
                 {showAlbum && (

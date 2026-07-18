@@ -40,6 +40,8 @@ class DownloadStatusRead(BaseModel):
 
 class DownloadSettings(BaseModel):
     check_interval_hours: int = Field(ge=0, le=720)
+    # Crontab expression; when set it takes precedence over the interval
+    cron: str = Field(default="", max_length=100)
 
 
 class SpotdlOptions(BaseModel):

@@ -21,6 +21,7 @@ export interface DownloadStatus {
 
 export interface DownloadSettings {
   check_interval_hours: number;
+  cron: string;
 }
 
 export const getWatches = () => api<DownloadWatch[]>("/downloads/watches");

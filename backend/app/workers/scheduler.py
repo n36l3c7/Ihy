@@ -1,6 +1,7 @@
 import logging
 
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from app.db.session import SessionLocal
 from app.services import app_settings
@@ -22,15 +23,25 @@ def start_scheduler() -> None:
 
 
 def reschedule_download_job() -> None:
-    """(Re)apply the configured download check interval. 0 hours disables the job."""
+    """(Re)apply the configured schedule. A cron expression wins over the
+    interval; 0 hours with no cron disables the job."""
     if _scheduler is None:
         return
     with SessionLocal() as db:
         hours = app_settings.get_download_interval_hours(db)
+        cron = app_settings.get_download_cron(db)
     existing = _scheduler.get_job(_DOWNLOAD_JOB_ID)
     if existing is not None:
         existing.remove()
-    if hours > 0:
+    if cron:
+        try:
+            trigger = CronTrigger.from_crontab(cron)
+        except ValueError:
+            logger.error("Invalid cron expression %r — download job disabled", cron)
+            return
+        _scheduler.add_job(download_manager.start, trigger, id=_DOWNLOAD_JOB_ID)
+        logger.info("Download watch check scheduled with cron %r", cron)
+    elif hours > 0:
         _scheduler.add_job(
             download_manager.start, "interval", hours=hours, id=_DOWNLOAD_JOB_ID
         )

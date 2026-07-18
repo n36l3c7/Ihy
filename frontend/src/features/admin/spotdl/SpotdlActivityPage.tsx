@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   deleteFix,
   type DownloadFix,
+  type DownloadSettings,
   getDownloadLog,
   getDownloadSettings,
   getDownloadStatus,
@@ -16,6 +17,7 @@ import {
 } from "../../../api/downloads";
 import { ApiError } from "../../../api/http";
 import { buttonClass, inputClass } from "../../auth/LoginPage";
+import { ScheduleEditor, summarize } from "./ScheduleEditor";
 
 function adviceFor(error: string | null): string {
   const text = (error ?? "").toLowerCase();
@@ -118,7 +120,6 @@ function FixRow({ fix }: { fix: DownloadFix }) {
 
 export function SpotdlActivityPage() {
   const queryClient = useQueryClient();
-  const [interval, setIntervalHours] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const status = useQuery({
@@ -163,69 +164,50 @@ export function SpotdlActivityPage() {
     onError: (err) => setError(err instanceof ApiError ? err.message : "Failed to start"),
   });
 
-  const intervalMutation = useMutation({
-    mutationFn: (hours: number) => updateDownloadSettings({ check_interval_hours: hours }),
+  const scheduleMutation = useMutation({
+    mutationFn: (payload: DownloadSettings) => updateDownloadSettings(payload),
     onSuccess: (data) => {
       queryClient.setQueryData(["download-settings"], data);
-      setIntervalHours(null);
       setError(null);
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Failed to save"),
   });
 
-  const intervalValue = interval ?? settings.data?.check_interval_hours.toString() ?? "";
-
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
       <div className="min-w-0">
         <div className="mb-6 rounded-lg border border-zinc-800 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-zinc-300">
                 {running
                   ? `Checking now: ${status.data?.current_watch ?? "..."}`
-                  : "Periodic check"}
+                  : "Automatic check"}
               </p>
               <p className="mt-1 text-xs text-zinc-500">
-                Watches are checked automatically for new releases. 0 hours disables the
-                schedule.
+                {settings.data ? summarize(settings.data) : "Loading schedule..."}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-xs text-zinc-400">
-                every
-                <input
-                  className={`${inputClass} w-20 py-1`}
-                  value={intervalValue}
-                  onChange={(event) => setIntervalHours(event.target.value)}
-                  inputMode="numeric"
-                />
-                hours
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  const hours = Number(intervalValue);
-                  if (Number.isInteger(hours) && hours >= 0) intervalMutation.mutate(hours);
-                }}
-                disabled={intervalMutation.isPending || interval === null}
-                className={`${buttonClass} w-auto px-4`}
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                onClick={() => runMutation.mutate()}
-                disabled={running || runMutation.isPending}
-                className={`${buttonClass} w-auto px-4`}
-              >
-                <span className="flex items-center gap-2">
-                  <DownloadCloud className={`h-4 w-4 ${running ? "animate-pulse" : ""}`} />
-                  {running ? "Running..." : "Check now"}
-                </span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => runMutation.mutate()}
+              disabled={running || runMutation.isPending}
+              className={`${buttonClass} w-auto px-4`}
+            >
+              <span className="flex items-center gap-2">
+                <DownloadCloud className={`h-4 w-4 ${running ? "animate-pulse" : ""}`} />
+                {running ? "Running..." : "Check now"}
+              </span>
+            </button>
           </div>
+          {settings.data && (
+            <ScheduleEditor
+              key={`${settings.data.check_interval_hours}-${settings.data.cron}`}
+              settings={settings.data}
+              saving={scheduleMutation.isPending}
+              onSave={(payload) => scheduleMutation.mutate(payload)}
+            />
+          )}
           {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
         </div>
 

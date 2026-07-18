@@ -22,7 +22,7 @@ export function ArtistDetailPage() {
   const isAdmin = useAuthStore((state) => state.user?.role === "admin");
   const playQueue = usePlayerStore((state) => state.playQueue);
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const [imageVersion, setImageVersion] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 

@@ -203,7 +203,8 @@ def test_download_settings_roundtrip(
     client: TestClient, admin_headers: dict[str, str]
 ) -> None:
     assert client.get(SETTINGS_URL, headers=admin_headers).json() == {
-        "check_interval_hours": 24
+        "check_interval_hours": 24,
+        "cron": "",
     }
 
     response = client.put(
@@ -211,13 +212,34 @@ def test_download_settings_roundtrip(
     )
     assert response.status_code == 200
     assert client.get(SETTINGS_URL, headers=admin_headers).json() == {
-        "check_interval_hours": 12
+        "check_interval_hours": 12,
+        "cron": "",
     }
 
     disabled = client.put(
         SETTINGS_URL, json={"check_interval_hours": 0}, headers=admin_headers
     )
     assert disabled.status_code == 200
+
+
+def test_download_cron_schedule(client: TestClient, admin_headers: dict[str, str]) -> None:
+    response = client.put(
+        SETTINGS_URL,
+        json={"check_interval_hours": 0, "cron": "30 4 * * 1"},
+        headers=admin_headers,
+    )
+    assert response.status_code == 200
+    assert client.get(SETTINGS_URL, headers=admin_headers).json() == {
+        "check_interval_hours": 0,
+        "cron": "30 4 * * 1",
+    }
+
+    invalid = client.put(
+        SETTINGS_URL,
+        json={"check_interval_hours": 0, "cron": "not a cron"},
+        headers=admin_headers,
+    )
+    assert invalid.status_code == 400
 
 
 def test_parse_failures() -> None:
