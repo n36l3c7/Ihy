@@ -85,8 +85,19 @@ export function usePlayerAudio() {
 
   // Audio element events
   useEffect(() => {
-    const onTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const onLoadedMetadata = () => setDuration(audio.duration || 0);
+    const onTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      usePlayerStore.getState().setLastKnownTime(audio.currentTime);
+    };
+    const onLoadedMetadata = () => {
+      setDuration(audio.duration || 0);
+      const pending = usePlayerStore.getState().pendingSeekSeconds;
+      if (pending !== null) {
+        audio.currentTime = pending;
+        setCurrentTime(pending);
+        usePlayerStore.getState().setPendingSeekSeconds(null);
+      }
+    };
     const onEnded = () => {
       const { repeat, next, stopAfterTrack, setPlaying, setStopAfterTrack } =
         usePlayerStore.getState();

@@ -1,4 +1,5 @@
 import {
+  ListOrdered,
   MicVocal,
   Moon,
   Pause,
@@ -90,6 +91,8 @@ export function PlayerBar() {
   const setSleepEndsAt = usePlayerStore((state) => state.setSleepEndsAt);
   const stopAfterTrack = usePlayerStore((state) => state.stopAfterTrack);
   const setStopAfterTrack = usePlayerStore((state) => state.setStopAfterTrack);
+  const queueOpen = usePlayerStore((state) => state.queueOpen);
+  const toggleQueueOpen = usePlayerStore((state) => state.toggleQueueOpen);
   const { currentTime, duration, seek, restartOrPrevious } = usePlayerAudio();
   const [lyricsOpen, setLyricsOpen] = useState(false);
 
@@ -274,6 +277,16 @@ export function PlayerBar() {
             aria-label="Show lyrics"
           >
             <MicVocal className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={toggleQueueOpen}
+            className={`rounded-full p-2 transition-colors hover:text-zinc-100 ${
+              queueOpen ? "text-emerald-500" : ""
+            }`}
+            aria-label="Toggle queue panel"
+          >
+            <ListOrdered className="h-4 w-4" />
           </button>
           <Volume2 className="ml-1 h-4 w-4" />
           <input

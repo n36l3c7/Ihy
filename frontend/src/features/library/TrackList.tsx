@@ -44,6 +44,8 @@ export function TrackList({
   const currentTrack = usePlayerStore(selectCurrentTrack);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
   const playQueue = usePlayerStore((state) => state.playQueue);
+  const enqueueNext = usePlayerStore((state) => state.enqueueNext);
+  const enqueueEnd = usePlayerStore((state) => state.enqueueEnd);
   const isAdmin = useAuthStore((state) => state.user?.role === "admin");
   const queryClient = useQueryClient();
 
@@ -376,6 +378,28 @@ export function TrackList({
               >
                 <Play className="h-4 w-4" />
                 {multi ? `Play ${targets.length} tracks` : "Play"}
+              </button>
+              <button
+                type="button"
+                className={contextMenuItemClass}
+                onClick={() => {
+                  enqueueNext(targets.map((i) => tracks[i]));
+                  closeMenu();
+                }}
+              >
+                <Play className="h-4 w-4" />
+                Play next
+              </button>
+              <button
+                type="button"
+                className={contextMenuItemClass}
+                onClick={() => {
+                  enqueueEnd(targets.map((i) => tracks[i]));
+                  closeMenu();
+                }}
+              >
+                <ListPlus className="h-4 w-4" />
+                Add to queue
               </button>
               <button
                 type="button"

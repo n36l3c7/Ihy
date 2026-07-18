@@ -16,6 +16,7 @@ from app.models.library import (
 )
 from app.models.lyrics import Lyrics
 from app.models.playlist import Playlist, PlaylistItem
+from app.models.queues import SavedQueue, SavedQueueItem
 from app.models.user import User, UserRole
 
 __all__ = [
@@ -31,6 +32,8 @@ __all__ = [
     "PlayHistory",
     "Playlist",
     "PlaylistItem",
+    "SavedQueue",
+    "SavedQueueItem",
     "Source",
     "Track",
     "User",

@@ -19,6 +19,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import type { Playlist } from "../api/types";
 import { createPlaylist, deletePlaylist, getPlaylist, getPlaylists } from "../api/userLibrary";
 import { PlayerBar } from "../features/player/PlayerBar";
+import { QueuePanel } from "../features/player/QueuePanel";
 import { useAuthStore } from "../stores/authStore";
 import { usePlayerStore } from "../stores/playerStore";
 import { ContextMenu, contextMenuItemClass } from "./ContextMenu";
@@ -47,6 +48,7 @@ export function Layout() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const playQueue = usePlayerStore((state) => state.playQueue);
+  const queueOpen = usePlayerStore((state) => state.queueOpen);
   const [menu, setMenu] = useState<{ x: number; y: number; playlist: Playlist } | null>(null);
 
   const playlists = useQuery({ queryKey: ["playlists"], queryFn: getPlaylists });
@@ -145,6 +147,7 @@ export function Layout() {
         <main className="min-h-0 flex-1 overflow-y-auto px-8 py-6">
           <Outlet />
         </main>
+        {queueOpen && <QueuePanel />}
       </div>
       <PlayerBar />
       {menu && (
