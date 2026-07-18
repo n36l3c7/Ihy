@@ -1,5 +1,21 @@
 import { api } from "./http";
 
+export interface CookiesStatus {
+  uploaded: boolean;
+  active: boolean;
+}
+
+export const getCookiesStatus = () => api<CookiesStatus>("/downloads/cookies");
+
+export async function uploadCookies(file: File): Promise<CookiesStatus> {
+  const form = new FormData();
+  form.append("file", file);
+  return api<CookiesStatus>("/downloads/cookies", { method: "POST", body: form });
+}
+
+export const deleteCookies = () =>
+  api<CookiesStatus>("/downloads/cookies", { method: "DELETE" });
+
 export interface SpotifyImportStatus {
   available: boolean;
   running: boolean;

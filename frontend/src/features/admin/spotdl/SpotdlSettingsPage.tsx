@@ -1,9 +1,94 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useEffect, useState } from "react";
+import { Cookie, Trash2 } from "lucide-react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 
-import { getSpotdlOptions, type SpotdlOptions, updateSpotdlOptions } from "../../../api/downloads";
+import {
+  deleteCookies,
+  getCookiesStatus,
+  getSpotdlOptions,
+  type SpotdlOptions,
+  updateSpotdlOptions,
+  uploadCookies,
+} from "../../../api/downloads";
 import { PageSpinner } from "../../../components/Spinner";
 import { buttonClass, inputClass } from "../../auth/LoginPage";
+
+/** Upload a YouTube cookies.txt to unlock age-restricted downloads; the
+ *  spotdl cookie-file option is wired automatically. */
+function YoutubeCookiesCard() {
+  const queryClient = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const status = useQuery({ queryKey: ["spotdl-cookies"], queryFn: getCookiesStatus });
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ["spotdl-cookies"] });
+    void queryClient.invalidateQueries({ queryKey: ["spotdl-options"] });
+  };
+
+  const uploadMutation = useMutation({ mutationFn: uploadCookies, onSuccess: invalidate });
+  const removeMutation = useMutation({ mutationFn: deleteCookies, onSuccess: invalidate });
+
+  return (
+    <div className={sectionClass}>
+      <p className="flex items-center gap-2 text-sm font-medium text-zinc-300">
+        <Cookie className="h-4 w-4 text-emerald-500" />
+        YouTube cookies (age-restricted videos)
+      </p>
+      <p className="mt-1 text-xs text-zinc-500">
+        Some videos require a signed-in account ("Sign in to confirm your age").
+        Export your youtube.com cookies with a browser extension like
+        &quot;Get cookies.txt LOCALLY&quot; and upload the file here — the cookie
+        option below is set automatically and downloads start working.
+      </p>
+      <div className="mt-3 flex items-center gap-3">
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".txt"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) uploadMutation.mutate(file);
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploadMutation.isPending}
+          className={`${buttonClass} w-auto px-5`}
+        >
+          {uploadMutation.isPending
+            ? "Uploading..."
+            : status.data?.uploaded
+              ? "Replace cookies.txt"
+              : "Upload cookies.txt"}
+        </button>
+        {status.data?.active && (
+          <span className="text-sm text-emerald-500">Cookies active.</span>
+        )}
+        {status.data?.uploaded && (
+          <button
+            type="button"
+            onClick={() => removeMutation.mutate()}
+            disabled={removeMutation.isPending}
+            className="flex items-center gap-1.5 rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition-colors hover:border-red-500 hover:text-red-400"
+          >
+            <Trash2 className="h-4 w-4" />
+            Remove
+          </button>
+        )}
+      </div>
+      {uploadMutation.isError && (
+        <p className="mt-2 text-sm text-red-400">
+          {uploadMutation.error instanceof Error
+            ? uploadMutation.error.message
+            : "Upload failed."}
+        </p>
+      )}
+    </div>
+  );
+}
 
 const labelClass = "mb-1 block text-xs font-medium text-zinc-400";
 const sectionClass = "mb-6 rounded-lg border border-zinc-800 p-5";
@@ -133,7 +218,8 @@ export function SpotdlSettingsPage() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl">
+    <div className="max-w-2xl">
+    <form onSubmit={handleSubmit}>
       <div className={sectionClass}>
         <p className="mb-1 text-sm font-medium text-zinc-300">Spotify API credentials</p>
         <p className="mb-4 text-xs text-zinc-500">
@@ -348,5 +434,7 @@ export function SpotdlSettingsPage() {
         {saveMutation.isError && <span className="text-sm text-red-400">Failed to save.</span>}
       </div>
     </form>
+    <YoutubeCookiesCard />
+    </div>
   );
 }

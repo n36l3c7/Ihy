@@ -1,11 +1,13 @@
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import AdminUserDep, CurrentUserDep, DbDep
+from app.core.config import get_settings
 from app.models.downloads import DownloadFix, DownloadWatch
 from app.models.library import Source
 from app.schemas.downloads import (
@@ -212,6 +214,64 @@ def run_downloads(_admin: AdminUserDep) -> DownloadStatusRead:
             status_code=status.HTTP_409_CONFLICT, detail="A download check is already running"
         )
     return download_status(_admin)
+
+
+COOKIES_FILENAME = "spotdl-cookies.txt"
+
+
+def _cookies_path() -> Path:
+    return get_settings().data_dir / COOKIES_FILENAME
+
+
+class CookiesStatusRead(BaseModel):
+    uploaded: bool
+    active: bool  # the spotdl cookie_file option points at the stored file
+
+
+def _cookies_status(db: Session) -> CookiesStatusRead:
+    path = _cookies_path()
+    uploaded = path.is_file()
+    active = (
+        uploaded
+        and str(app_settings.get_spotdl_options(db).get("cookie_file") or "") == str(path)
+    )
+    return CookiesStatusRead(uploaded=uploaded, active=active)
+
+
+@router.get("/cookies", response_model=CookiesStatusRead)
+def cookies_status(db: DbDep, _admin: AdminUserDep) -> CookiesStatusRead:
+    return _cookies_status(db)
+
+
+@router.post("/cookies", response_model=CookiesStatusRead)
+def upload_cookies(file: UploadFile, db: DbDep, _admin: AdminUserDep) -> CookiesStatusRead:
+    """Store a YouTube cookies.txt and wire it into the spotdl options,
+    unlocking age-restricted downloads."""
+    data = file.file.read(2 * 1024 * 1024)
+    text = data.decode("utf-8", errors="replace")
+    if "youtube.com" not in text and not text.lstrip().startswith("# Netscape"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This does not look like a cookies.txt export (Netscape format)",
+        )
+    path = _cookies_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    options = app_settings.get_spotdl_options(db)
+    options["cookie_file"] = str(path)
+    app_settings.set_spotdl_options(db, options)
+    return _cookies_status(db)
+
+
+@router.delete("/cookies", response_model=CookiesStatusRead)
+def delete_cookies(db: DbDep, _admin: AdminUserDep) -> CookiesStatusRead:
+    path = _cookies_path()
+    path.unlink(missing_ok=True)
+    options = app_settings.get_spotdl_options(db)
+    if str(options.get("cookie_file") or "") == str(path):
+        options["cookie_file"] = ""
+        app_settings.set_spotdl_options(db, options)
+    return _cookies_status(db)
 
 
 class SpotifyPlaylistImportRequest(BaseModel):
