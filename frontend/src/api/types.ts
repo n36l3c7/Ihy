@@ -85,9 +85,11 @@ export interface Playlist {
   id: number;
   name: string;
   description: string | null;
+  is_public: boolean;
   created_at: string;
   updated_at: string;
   track_count: number;
+  owner_username: string | null;
 }
 
 export interface PlaylistItem {

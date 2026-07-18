@@ -1,12 +1,23 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Heart, ListPlus, Pencil, Play, SquareCheck, Trash2, Volume2, X } from "lucide-react";
+import {
+  Heart,
+  ListPlus,
+  Pencil,
+  Play,
+  Radio,
+  SquareCheck,
+  Trash2,
+  Volume2,
+  X,
+} from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 
-import { deleteTrack } from "../../api/catalog";
+import { deleteTrack, getRadioTracks } from "../../api/catalog";
 import type { Track } from "../../api/types";
 import { addFavorite, addTrackToPlaylist, getPlaylists } from "../../api/userLibrary";
 import { ContextMenu, contextMenuItemClass } from "../../components/ContextMenu";
+import { RatingStars } from "../../components/RatingStars";
 import { CoverImage } from "../../components/CoverImage";
 import { FavoriteButton } from "../../components/FavoriteButton";
 import { formatDuration } from "../../lib/format";
@@ -401,6 +412,22 @@ export function TrackList({
                 <ListPlus className="h-4 w-4" />
                 Add to queue
               </button>
+              {!multi && (
+                <button
+                  type="button"
+                  className={contextMenuItemClass}
+                  onClick={() => {
+                    const seed = tracks[menu.index];
+                    void getRadioTracks(seed.id, [seed.id]).then((radio) =>
+                      playQueue([seed, ...radio]),
+                    );
+                    closeMenu();
+                  }}
+                >
+                  <Radio className="h-4 w-4" />
+                  Start radio
+                </button>
+              )}
               <button
                 type="button"
                 className={contextMenuItemClass}
@@ -412,6 +439,12 @@ export function TrackList({
                 <Heart className="h-4 w-4" />
                 Add to liked songs
               </button>
+              {!multi && (
+                <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-zinc-200">
+                  Rate
+                  <RatingStars trackId={tracks[menu.index].id} />
+                </div>
+              )}
               {isAdmin && (
                 <button
                   type="button"

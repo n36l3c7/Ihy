@@ -102,6 +102,8 @@ def update_playlist(db: Session, playlist: Playlist, changes: dict[str, Any]) ->
         playlist.name = changes["name"]
     if "description" in changes:
         playlist.description = changes["description"]
+    if changes.get("is_public") is not None:
+        playlist.is_public = changes["is_public"]
     db.commit()
     db.refresh(playlist)
     return playlist

@@ -3,7 +3,8 @@ from pathlib import Path
 from fastapi import APIRouter, Form, HTTPException, UploadFile, status
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import CurrentUserDep, DbDep
 from app.models.playlist import Playlist
@@ -29,6 +30,20 @@ def _get_playlist_or_404(db: Session, user: User, playlist_id: int) -> Playlist:
     return playlist
 
 
+def _get_readable_playlist(db: Session, user: User, playlist_id: int) -> Playlist:
+    """The user's own playlist, or anyone's public one (read-only access)."""
+    playlist = user_library.get_playlist(db, user, playlist_id)
+    if playlist is None:
+        playlist = db.scalar(
+            select(Playlist)
+            .where(Playlist.id == playlist_id, Playlist.is_public.is_(True))
+            .options(selectinload(Playlist.owner))
+        )
+    if playlist is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Playlist not found")
+    return playlist
+
+
 def _to_read(playlist: Playlist, track_count: int) -> PlaylistRead:
     data = PlaylistRead.model_validate(playlist)
     data.track_count = track_count
@@ -38,6 +53,23 @@ def _to_read(playlist: Playlist, track_count: int) -> PlaylistRead:
 @router.get("", response_model=list[PlaylistRead])
 def list_playlists(db: DbDep, user: CurrentUserDep) -> list[PlaylistRead]:
     return [_to_read(playlist, count) for playlist, count in user_library.list_playlists(db, user)]
+
+
+@router.get("/shared", response_model=list[PlaylistRead])
+def list_shared_playlists(db: DbDep, user: CurrentUserDep) -> list[PlaylistRead]:
+    """Public playlists owned by other users (read-only)."""
+    playlists = db.scalars(
+        select(Playlist)
+        .where(Playlist.is_public.is_(True), Playlist.owner_id != user.id)
+        .options(selectinload(Playlist.owner), selectinload(Playlist.items))
+        .order_by(Playlist.name)
+    )
+    result = []
+    for playlist in playlists:
+        read = _to_read(playlist, len(playlist.items))
+        read.owner_username = playlist.owner.username if playlist.owner else None
+        result.append(read)
+    return result
 
 
 @router.post("", response_model=PlaylistRead, status_code=status.HTTP_201_CREATED)
@@ -83,7 +115,7 @@ def import_playlist(
 @router.get("/{playlist_id}/export")
 def export_playlist(playlist_id: int, db: DbDep, user: CurrentUserDep) -> PlainTextResponse:
     """Download the playlist as extended M3U."""
-    playlist = _get_playlist_or_404(db, user, playlist_id)
+    playlist = _get_readable_playlist(db, user, playlist_id)
     return PlainTextResponse(
         playlist_files.export_m3u(playlist),
         media_type="audio/x-mpegurl",
@@ -95,9 +127,10 @@ def export_playlist(playlist_id: int, db: DbDep, user: CurrentUserDep) -> PlainT
 
 @router.get("/{playlist_id}", response_model=PlaylistDetail)
 def read_playlist(playlist_id: int, db: DbDep, user: CurrentUserDep) -> PlaylistDetail:
-    playlist = _get_playlist_or_404(db, user, playlist_id)
+    playlist = _get_readable_playlist(db, user, playlist_id)
     detail = PlaylistDetail.model_validate(playlist)
     detail.track_count = len(playlist.items)
+    detail.owner_username = playlist.owner.username if playlist.owner else None
     return detail
 
 

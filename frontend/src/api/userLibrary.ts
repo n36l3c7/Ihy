@@ -27,6 +27,14 @@ export const removeFavorite = (trackId: number) =>
 
 export const getPlaylists = () => api<Playlist[]>("/playlists");
 
+export const getSharedPlaylists = () => api<Playlist[]>("/playlists/shared");
+
+export const setPlaylistPublic = (id: number, isPublic: boolean) =>
+  api<Playlist>(`/playlists/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ is_public: isPublic }),
+  });
+
 export const createPlaylist = (name: string) =>
   api<Playlist>("/playlists", { method: "POST", body: JSON.stringify({ name }) });
 

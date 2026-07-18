@@ -1,5 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, HardDriveDownload, ListMusic, Play, Trash2, X } from "lucide-react";
+import {
+  Download,
+  Globe,
+  HardDriveDownload,
+  ListMusic,
+  Play,
+  Trash2,
+  X,
+} from "lucide-react";
 import { type MouseEvent, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
@@ -9,8 +17,10 @@ import {
   getPlaylist,
   removePlaylistItem,
   renamePlaylist,
+  setPlaylistPublic,
   updatePlaylistOrder,
 } from "../../api/userLibrary";
+import { useAuthStore } from "../../stores/authStore";
 import { PageSpinner } from "../../components/Spinner";
 import { formatTotalDuration } from "../../lib/format";
 import { downloadTracks, offlineSupported } from "../../lib/offline";
@@ -23,6 +33,7 @@ export function PlaylistPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const playQueue = usePlayerStore((state) => state.playQueue);
+  const username = useAuthStore((state) => state.user?.username);
   const [editedName, setEditedName] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<string | null>(null);
 
@@ -59,6 +70,11 @@ export function PlaylistPage() {
     onSuccess: invalidate,
   });
 
+  const publicMutation = useMutation({
+    mutationFn: (isPublic: boolean) => setPlaylistPublic(id, isPublic),
+    onSuccess: invalidate,
+  });
+
   if (query.isPending) return <PageSpinner />;
   if (query.isError) {
     return <p className="py-12 text-center text-red-400">Failed to load playlist.</p>;
@@ -66,6 +82,8 @@ export function PlaylistPage() {
   const playlist = query.data;
   const tracks = playlist.items.map((item) => item.track);
   const totalDuration = tracks.reduce((sum, track) => sum + track.duration, 0);
+  // Shared playlists from other users are read-only
+  const isOwner = !playlist.owner_username || playlist.owner_username === username;
 
   const handleReorder = (fromIndex: number, toIndex: number) => {
     const itemIds = playlist.items.map((item) => item.id);
@@ -107,19 +125,30 @@ export function PlaylistPage() {
           <ListMusic className="h-14 w-14" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Playlist</p>
-          <input
-            value={editedName ?? playlist.name}
-            onChange={(event) => setEditedName(event.target.value)}
-            onBlur={commitRename}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") (event.target as HTMLInputElement).blur();
-            }}
-            className="mt-1 w-full truncate border-none bg-transparent text-4xl font-bold text-zinc-100 outline-none focus:ring-0"
-            aria-label="Playlist name"
-          />
+          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            {isOwner ? "Playlist" : `Shared by ${playlist.owner_username}`}
+          </p>
+          {isOwner ? (
+            <input
+              value={editedName ?? playlist.name}
+              onChange={(event) => setEditedName(event.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") (event.target as HTMLInputElement).blur();
+              }}
+              className="mt-1 w-full truncate border-none bg-transparent text-4xl font-bold text-zinc-100 outline-none focus:ring-0"
+              aria-label="Playlist name"
+            />
+          ) : (
+            <h1 className="mt-1 truncate text-4xl font-bold text-zinc-100">
+              {playlist.name}
+            </h1>
+          )}
           <p className="mt-2 text-sm text-zinc-400">
             {tracks.length} tracks · {formatTotalDuration(totalDuration)}
+            {playlist.is_public && isOwner && (
+              <span className="ml-2 text-emerald-500">· public</span>
+            )}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -157,14 +186,36 @@ export function PlaylistPage() {
           >
             <Download className="h-5 w-5" />
           </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="rounded-full p-2.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-red-400"
-            aria-label="Delete playlist"
-          >
-            <Trash2 className="h-5 w-5" />
-          </button>
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => publicMutation.mutate(!playlist.is_public)}
+              disabled={publicMutation.isPending}
+              className={`rounded-full p-2.5 transition-colors hover:bg-zinc-800 ${
+                playlist.is_public
+                  ? "text-emerald-500"
+                  : "text-zinc-500 hover:text-zinc-100"
+              }`}
+              aria-label={playlist.is_public ? "Make private" : "Share with other users"}
+              title={
+                playlist.is_public
+                  ? "Public — other users can see and play it"
+                  : "Share with other users"
+              }
+            >
+              <Globe className="h-5 w-5" />
+            </button>
+          )}
+          {isOwner && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="rounded-full p-2.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-red-400"
+              aria-label="Delete playlist"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -172,6 +223,8 @@ export function PlaylistPage() {
         <p className="py-12 text-center text-zinc-500">
           This playlist is empty — add tracks from the library.
         </p>
+      ) : !isOwner ? (
+        <TrackList tracks={tracks} />
       ) : (
         <TrackList
           tracks={tracks}

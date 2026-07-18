@@ -11,6 +11,21 @@ if TYPE_CHECKING:
     from app.models.user import User
 
 
+class TrackRating(Base):
+    """A user's 1-5 star rating for a track."""
+
+    __tablename__ = "track_ratings"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    track_id: Mapped[int] = mapped_column(
+        ForeignKey("tracks.id", ondelete="CASCADE"), primary_key=True
+    )
+    rating: Mapped[int]  # 1..5
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
 class Favorite(Base):
     """A user's liked track. Composite primary key prevents duplicates."""
 

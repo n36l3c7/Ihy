@@ -21,7 +21,7 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import DbDep
 from app.core.config import get_settings
 from app.models.artist_info import ArtistInfo
-from app.models.interactions import Favorite
+from app.models.interactions import Favorite, TrackRating
 from app.models.library import Album, Artist, Genre, Track
 from app.models.lyrics import Lyrics
 from app.models.playlist import Playlist, PlaylistItem
@@ -772,6 +772,31 @@ def get_starred2(request: Request, db: DbDep) -> Response:
         request,
         {key: {"artist": [], "album": [], "song": [_song_entry(track) for track in tracks]}},
     )
+
+
+@sub_get("/setRating")
+def set_rating(request: Request, db: DbDep) -> Response:
+    user = authenticate(request, db)
+    raw = request.query_params.get("id")
+    if raw is None or not raw.startswith("tr-"):
+        return subsonic_response(request)  # album/artist ratings are ignored
+    track_id = _parse_id(raw, "tr")
+    if db.get(Track, track_id) is None:
+        raise SubsonicError(70, "The requested data was not found.")
+    try:
+        rating = max(0, min(5, int(request.query_params.get("rating", 0))))
+    except ValueError:
+        raise SubsonicError(10, "rating must be an integer 0-5.") from None
+    existing = db.get(TrackRating, (user.id, track_id))
+    if rating == 0:
+        if existing is not None:
+            db.delete(existing)
+    elif existing is not None:
+        existing.rating = rating
+    else:
+        db.add(TrackRating(user_id=user.id, track_id=track_id, rating=rating))
+    db.commit()
+    return subsonic_response(request)
 
 
 @sub_get("/scrobble")

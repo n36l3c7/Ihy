@@ -16,13 +16,13 @@ from typing import Any
 from sqlalchemy import ColumnElement, Select, and_, exists, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models.interactions import Favorite, PlayHistory
+from app.models.interactions import Favorite, PlayHistory, TrackRating
 from app.models.library import Album, Artist, Genre, Track
 from app.models.smart_playlist import SmartPlaylist
 from app.models.user import User
 
 TEXT_FIELDS = {"title", "artist", "album", "genre", "format"}
-NUMBER_FIELDS = {"year", "duration", "play_count"}
+NUMBER_FIELDS = {"year", "duration", "play_count", "rating"}
 WINDOW_FIELDS = {"added_days", "played_days", "not_played_days"}
 VALID_SORTS = {"title", "recent", "random", "most_played", "year"}
 
@@ -88,12 +88,23 @@ def _play_count_subquery(user_id: int):
     )
 
 
+def _rating_subquery(user_id: int):
+    return (
+        select(TrackRating.rating)
+        .where(TrackRating.user_id == user_id, TrackRating.track_id == Track.id)
+        .correlate(Track)
+        .scalar_subquery()
+    )
+
+
 def _number_condition(field: str, op: str, value: float, user_id: int) -> ColumnElement[bool]:
     column: Any
     if field == "year":
         column = Track.year
     elif field == "duration":
         column = Track.duration
+    elif field == "rating":
+        column = _rating_subquery(user_id)
     else:  # play_count
         column = _play_count_subquery(user_id)
     if op == "eq":

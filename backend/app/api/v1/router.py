@@ -12,6 +12,7 @@ from app.api.v1 import (
     library,
     playlists,
     queues,
+    ratings,
     scrobbling,
     settings,
     smart_playlists,
@@ -38,6 +39,7 @@ api_router.include_router(
     smart_playlists.router, prefix="/smart-playlists", tags=["smart-playlists"]
 )
 api_router.include_router(scrobbling.router, prefix="/scrobbling", tags=["scrobbling"])
+api_router.include_router(ratings.router, prefix="/ratings", tags=["ratings"])
 api_router.include_router(history.router, prefix="/history", tags=["history"])
 api_router.include_router(queues.router, prefix="/queues", tags=["queues"])
 api_router.include_router(stats.router, prefix="/stats", tags=["stats"])

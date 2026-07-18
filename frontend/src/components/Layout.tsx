@@ -35,6 +35,7 @@ import {
   deletePlaylist,
   getPlaylist,
   getPlaylists,
+  getSharedPlaylists,
   importPlaylistFile,
 } from "../api/userLibrary";
 import { SmartPlaylistDialog } from "../features/playlists/SmartPlaylistDialog";
@@ -93,6 +94,10 @@ export function Layout() {
   const smartPlaylists = useQuery({
     queryKey: ["smart-playlists"],
     queryFn: getSmartPlaylists,
+  });
+  const sharedPlaylists = useQuery({
+    queryKey: ["shared-playlists"],
+    queryFn: getSharedPlaylists,
   });
 
   // Cross-tab sync first, then resume the last session unless another
@@ -258,6 +263,27 @@ export function Layout() {
                 <span className="truncate">{playlist.name}</span>
               </NavLink>
             ))}
+            {sharedPlaylists.data && sharedPlaylists.data.length > 0 && (
+              <>
+                <p className="mb-1 mt-5 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Shared with you
+                </p>
+                {sharedPlaylists.data.map((playlist) => (
+                  <NavLink
+                    key={playlist.id}
+                    to={`/playlists/${playlist.id}`}
+                    className={linkClass}
+                    title={`Shared by ${playlist.owner_username}`}
+                  >
+                    <ListMusic className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{playlist.name}</span>
+                    <span className="ml-auto shrink-0 text-[10px] text-zinc-600">
+                      {playlist.owner_username}
+                    </span>
+                  </NavLink>
+                ))}
+              </>
+            )}
             <div className="mb-1 mt-5 flex items-center justify-between px-3">
               <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Smart playlists

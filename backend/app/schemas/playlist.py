@@ -13,6 +13,7 @@ class PlaylistCreate(BaseModel):
 class PlaylistUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     description: str | None = Field(default=None, max_length=500)
+    is_public: bool | None = None
 
 
 class PlaylistRead(BaseModel):
@@ -21,9 +22,11 @@ class PlaylistRead(BaseModel):
     id: int
     name: str
     description: str | None
+    is_public: bool = False
     created_at: datetime
     updated_at: datetime
     track_count: int = 0
+    owner_username: str | None = None
 
 
 class PlaylistItemRead(BaseModel):

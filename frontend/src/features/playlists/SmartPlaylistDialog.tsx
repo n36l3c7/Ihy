@@ -82,6 +82,16 @@ const FIELDS: FieldDef[] = [
     ],
   },
   {
+    id: "rating",
+    label: "Rating (1-5)",
+    type: "number",
+    ops: [
+      { id: "gte", label: "≥" },
+      { id: "lte", label: "≤" },
+      { id: "eq", label: "is" },
+    ],
+  },
+  {
     id: "added_days",
     label: "Added in the last (days)",
     type: "number",

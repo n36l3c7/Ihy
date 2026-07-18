@@ -16,6 +16,7 @@ import type { Track } from "../../api/types";
 import { getLyrics } from "../../api/userLibrary";
 import { CoverImage } from "../../components/CoverImage";
 import { FavoriteButton } from "../../components/FavoriteButton";
+import { RatingStars } from "../../components/RatingStars";
 import { Visualizer } from "../../components/Visualizer";
 import { WaveformSeekbar } from "../../components/WaveformSeekbar";
 import { useImageColor } from "../../hooks/useImageColor";
@@ -110,6 +111,9 @@ export function NowPlayingView({
           />
           <div className="w-full text-center">
             <p className="truncate text-2xl font-bold text-zinc-100">{track.title}</p>
+            <div className="mt-1 flex justify-center">
+              <RatingStars trackId={track.id} />
+            </div>
             <p className="mt-1 truncate text-sm text-zinc-300">
               {track.artists.map((artist, index) => (
                 <span key={artist.id}>

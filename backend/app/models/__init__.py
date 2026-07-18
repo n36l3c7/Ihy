@@ -5,7 +5,7 @@ from app.db.base import Base
 from app.models.app_setting import AppSetting
 from app.models.artist_info import ArtistInfo
 from app.models.downloads import DownloadFix, DownloadWatch
-from app.models.interactions import Bookmark, Favorite, PlayHistory
+from app.models.interactions import Bookmark, Favorite, PlayHistory, TrackRating
 from app.models.library import (
     Album,
     Artist,
@@ -43,6 +43,7 @@ __all__ = [
     "SmartPlaylist",
     "Source",
     "Track",
+    "TrackRating",
     "User",
     "UserRole",
     "track_artists",

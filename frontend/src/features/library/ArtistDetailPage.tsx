@@ -1,9 +1,16 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ImagePlus, Play, Trash2 } from "lucide-react";
+import { ImagePlus, Play, Radio, Trash2 } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 
-import { deleteArtist, getAlbum, getArtist, getArtistInfo, getTracks } from "../../api/catalog";
+import {
+  deleteArtist,
+  getAlbum,
+  getArtist,
+  getArtistInfo,
+  getRadioTracks,
+  getTracks,
+} from "../../api/catalog";
 import { uploadArtistImage } from "../../api/tags";
 import { ArtistImage } from "../../components/ArtistImage";
 import { CardPlayButton } from "../../components/CardPlayButton";
@@ -64,6 +71,15 @@ export function ArtistDetailPage() {
   const handlePlayAll = async () => {
     const result = await getTracks({ artist_id: Number(artistId), limit: 500 });
     playQueue(result.items);
+  };
+
+  /** Artist radio: a random artist track as seed plus similar tracks. */
+  const handleRadio = async () => {
+    const result = await getTracks({ artist_id: Number(artistId), limit: 100 });
+    if (result.items.length === 0) return;
+    const seed = result.items[Math.floor(Math.random() * result.items.length)];
+    const radio = await getRadioTracks(seed.id, [seed.id]);
+    playQueue([seed, ...radio]);
   };
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -158,6 +174,15 @@ export function ArtistDetailPage() {
               <Trash2 className="h-5 w-5" />
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => void handleRadio()}
+            className="flex items-center gap-2 rounded-full border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-emerald-600 hover:text-emerald-400"
+            title="Play this artist plus similar tracks"
+          >
+            <Radio className="h-4 w-4" />
+            Radio
+          </button>
           <button
             type="button"
             onClick={() => void handlePlayAll()}
