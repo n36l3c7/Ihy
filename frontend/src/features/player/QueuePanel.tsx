@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ListMusic, Play, Save, Trash2, Volume2, X } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   deleteQueue,
@@ -15,7 +15,12 @@ import { selectOrderedTracks, usePlayerStore } from "../../stores/playerStore";
 
 export function QueuePanel() {
   const queryClient = useQueryClient();
-  const orderedTracks = usePlayerStore(selectOrderedTracks);
+  // Subscribe to the stable references and derive the ordered list with
+  // useMemo: selecting a freshly-built array from the store would make
+  // every snapshot "new" and loop React into error #185.
+  const queue = usePlayerStore((state) => state.queue);
+  const order = usePlayerStore((state) => state.order);
+  const orderedTracks = useMemo(() => order.map((index) => queue[index]), [queue, order]);
   const position = usePlayerStore((state) => state.position);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
   const jumpTo = usePlayerStore((state) => state.jumpTo);

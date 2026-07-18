@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
+import { createBrowserRouter, Navigate, RouterProvider, useRouteError } from "react-router";
 
 import { Layout } from "./components/Layout";
 import { BackupPage } from "./features/admin/BackupPage";
@@ -29,11 +29,30 @@ import { StatsPage } from "./features/library/StatsPage";
 import { TracksPage } from "./features/library/TracksPage";
 import { PlaylistPage } from "./features/playlists/PlaylistPage";
 
+function RouteError() {
+  const error = useRouteError();
+  const message = error instanceof Error ? error.message : "Unexpected error";
+  return (
+    <div className="flex h-screen flex-col items-center justify-center gap-4 bg-zinc-950 text-zinc-100">
+      <h1 className="text-2xl font-bold">Something went wrong</h1>
+      <p className="max-w-lg text-center text-sm text-zinc-400">{message}</p>
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
+      >
+        Reload
+      </button>
+    </div>
+  );
+}
+
 const router = createBrowserRouter([
-  { path: "/login", element: <LoginPage /> },
-  { path: "/setup", element: <SetupPage /> },
+  { path: "/login", element: <LoginPage />, errorElement: <RouteError /> },
+  { path: "/setup", element: <SetupPage />, errorElement: <RouteError /> },
   {
     element: <RequireAuth />,
+    errorElement: <RouteError />,
     children: [
       {
         element: <Layout />,
