@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ImagePlus, Pencil, Play } from "lucide-react";
+import { ImagePlus, Pencil, Play, Trash2 } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 
-import { getAlbum } from "../../api/catalog";
+import { deleteAlbum, getAlbum } from "../../api/catalog";
 import { uploadAlbumCover } from "../../api/tags";
 import { CoverImage } from "../../components/CoverImage";
 import { PageSpinner } from "../../components/Spinner";
@@ -16,9 +16,18 @@ import { TrackList } from "./TrackList";
 
 export function AlbumDetailPage() {
   const { albumId } = useParams();
+  const navigate = useNavigate();
   const playQueue = usePlayerStore((state) => state.playQueue);
   const isAdmin = useAuthStore((state) => state.user?.role === "admin");
   const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteAlbum(Number(albumId)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries();
+      navigate("/albums", { replace: true });
+    },
+  });
   const [editOpen, setEditOpen] = useState(false);
   const [tracksEditorOpen, setTracksEditorOpen] = useState(false);
   const [coverVersion, setCoverVersion] = useState(0);
@@ -138,6 +147,24 @@ export function AlbumDetailPage() {
               >
                 <Pencil className="h-4 w-4" />
                 Edit tracks
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Delete album "${album.title}" and its ${album.tracks.length} files from disk?`,
+                    )
+                  ) {
+                    deleteMutation.mutate();
+                  }
+                }}
+                disabled={deleteMutation.isPending}
+                className="rounded-full p-2.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-red-400"
+                aria-label="Delete album from platform"
+                title="Delete album (files removed from disk)"
+              >
+                <Trash2 className="h-5 w-5" />
               </button>
             </>
           )}

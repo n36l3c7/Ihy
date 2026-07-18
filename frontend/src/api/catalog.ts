@@ -37,3 +37,17 @@ export const getAlbums = (params: {
 export const getAlbum = (id: number) => api<AlbumDetail>(`/albums/${id}`);
 
 export const getGenres = () => api<Genre[]>("/genres");
+
+export interface LibraryDeleteResult {
+  deleted_files: number;
+  errors: string[];
+}
+
+export const deleteTrack = (id: number) =>
+  api<LibraryDeleteResult>(`/tracks/${id}`, { method: "DELETE" });
+
+export const deleteAlbum = (id: number) =>
+  api<LibraryDeleteResult>(`/albums/${id}`, { method: "DELETE" });
+
+export const deleteArtist = (id: number) =>
+  api<LibraryDeleteResult>(`/artists/${id}`, { method: "DELETE" });

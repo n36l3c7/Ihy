@@ -1,16 +1,28 @@
-import { useQuery } from "@tanstack/react-query";
-import { Mic2, Play } from "lucide-react";
-import { Link, useParams } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Mic2, Play, Trash2 } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router";
 
-import { getArtist, getTracks } from "../../api/catalog";
+import { deleteArtist, getArtist, getTracks } from "../../api/catalog";
 import { CoverImage } from "../../components/CoverImage";
 import { PageSpinner } from "../../components/Spinner";
+import { useAuthStore } from "../../stores/authStore";
 import { usePlayerStore } from "../../stores/playerStore";
 import { TrackList } from "./TrackList";
 
 export function ArtistDetailPage() {
   const { artistId } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const isAdmin = useAuthStore((state) => state.user?.role === "admin");
   const playQueue = usePlayerStore((state) => state.playQueue);
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteArtist(Number(artistId)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries();
+      navigate("/artists", { replace: true });
+    },
+  });
 
   const query = useQuery({
     queryKey: ["artist", artistId],
@@ -46,14 +58,36 @@ export function ArtistDetailPage() {
             {artist.album_count} albums · {artist.track_count} tracks
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void handlePlayAll()}
-          className="ml-auto flex shrink-0 items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
-        >
-          <Play className="h-4 w-4" />
-          Play all
-        </button>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Delete artist "${artist.name}" and every credited track from disk?`,
+                  )
+                ) {
+                  deleteMutation.mutate();
+                }
+              }}
+              disabled={deleteMutation.isPending}
+              className="rounded-full p-2.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-red-400"
+              aria-label="Delete artist from platform"
+              title="Delete artist (files removed from disk)"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void handlePlayAll()}
+            className="flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
+          >
+            <Play className="h-4 w-4" />
+            Play all
+          </button>
+        </div>
       </div>
 
       {tracksQuery.data && tracksQuery.data.items.length > 0 && (

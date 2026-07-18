@@ -15,10 +15,12 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # spotdl lives in its own virtualenv: its dependencies (fastapi<0.104)
-# conflict with the API's
+# conflict with the API's. Deno is pre-downloaded at build time because
+# some YouTube downloads require it as a JS runtime.
 RUN python -m venv /opt/spotdl \
     && /opt/spotdl/bin/pip install --no-cache-dir spotdl \
-    && rm -rf /root/.cache
+    && /opt/spotdl/bin/spotdl --download-deno \
+    && rm -rf /root/.cache/pip
 
 WORKDIR /app
 COPY backend/ ./

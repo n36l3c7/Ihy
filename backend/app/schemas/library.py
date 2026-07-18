@@ -68,3 +68,10 @@ class ArtistRead(BaseModel):
 
 class ArtistDetail(ArtistRead):
     albums: list[AlbumRead] = []
+
+
+class LibraryDeleteResult(BaseModel):
+    """Outcome of deleting tracks from the platform (files removed from disk)."""
+
+    deleted_files: int
+    errors: list[str] = []

@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Heart, ListPlus, Pencil, Play, SquareCheck, Volume2, X } from "lucide-react";
+import { Heart, ListPlus, Pencil, Play, SquareCheck, Trash2, Volume2, X } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 
+import { deleteTrack } from "../../api/catalog";
 import type { Track } from "../../api/types";
 import { addFavorite, addTrackToPlaylist, getPlaylists } from "../../api/userLibrary";
 import { ContextMenu, contextMenuItemClass } from "../../components/ContextMenu";
@@ -111,6 +112,28 @@ export function TrackList({
     } else {
       setBatchEditTracks(indices.map((i) => tracks[i]));
     }
+  };
+
+  const deleteFromLibrary = async (indices: number[]) => {
+    const count = indices.length;
+    const label = count === 1 ? `"${tracks[indices[0]].title}"` : `${count} tracks`;
+    if (
+      !window.confirm(
+        `Delete ${label} from the platform? The audio files are removed from disk.`,
+      )
+    ) {
+      return;
+    }
+    const ids = [...new Set(indices.map((i) => tracks[i].id))];
+    for (const id of ids) {
+      try {
+        await deleteTrack(id);
+      } catch {
+        // reported by the refreshed list state
+      }
+    }
+    setSelected(new Set());
+    void queryClient.invalidateQueries();
   };
 
   if (tracks.length === 0) {
@@ -376,6 +399,19 @@ export function TrackList({
                 <SquareCheck className="h-4 w-4" />
                 {selected.has(menu.index) ? "Deselect" : "Select"}
               </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  className={`${contextMenuItemClass} text-red-400 hover:text-red-300`}
+                  onClick={() => {
+                    void deleteFromLibrary(targets);
+                    closeMenu();
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {multi ? `Delete ${targets.length} tracks` : "Delete from library"}
+                </button>
+              )}
               <div className="my-1 border-t border-zinc-800" />
               <p className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Add to playlist

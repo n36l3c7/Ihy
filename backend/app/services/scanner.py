@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models.library import Album, Artist, Genre, Source, Track, track_artists, track_genres
 from app.services import app_settings
+from app.services.covers import invalidate_album_cover_cache
 from app.services.tag_reader import SUPPORTED_EXTENSIONS, AudioFileInfo, read_audio_file
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,9 @@ class _EntityCache:
                 )
                 self.db.add(found)
                 self.db.flush()
+                # A brand-new album may reuse the id of a deleted one;
+                # drop any stale cached cover for that id
+                invalidate_album_cover_cache(found.id)
             self.albums[key] = found
         return self.albums[key]
 
@@ -250,6 +254,11 @@ def _apply_info(
 
 def _prune_orphans(db: Session) -> None:
     """Delete albums, artists and genres that no longer have any tracks."""
+    orphan_album_ids = list(
+        db.scalars(select(Album.id).where(~exists().where(Track.album_id == Album.id)))
+    )
+    for album_id in orphan_album_ids:
+        invalidate_album_cover_cache(album_id)
     db.execute(delete(Album).where(~exists().where(Track.album_id == Album.id)))
     db.execute(
         delete(Artist).where(

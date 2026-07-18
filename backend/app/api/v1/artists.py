@@ -2,11 +2,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.api.deps import CurrentUserDep, DbDep
+from app.api.deps import AdminUserDep, CurrentUserDep, DbDep
 from app.models.library import Album, Artist
 from app.schemas.common import Page
-from app.schemas.library import AlbumRead, ArtistDetail, ArtistRead
-from app.services import catalog
+from app.schemas.library import AlbumRead, ArtistDetail, ArtistRead, LibraryDeleteResult
+from app.services import catalog, library_editor
 
 router = APIRouter()
 
@@ -39,6 +39,17 @@ def list_artists(
         "limit": limit,
         "offset": offset,
     }
+
+
+@router.delete("/{artist_id}", response_model=LibraryDeleteResult)
+def delete_artist(artist_id: int, db: DbDep, _admin: AdminUserDep) -> LibraryDeleteResult:
+    """Remove every track credited to the artist (collaborations included):
+    the audio files are deleted from disk."""
+    artist = catalog.get_artist(db, artist_id)
+    if artist is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artist not found")
+    deleted, errors = library_editor.delete_artist(db, artist)
+    return LibraryDeleteResult(deleted_files=deleted, errors=errors)
 
 
 @router.get("/{artist_id}", response_model=ArtistDetail)

@@ -39,6 +39,20 @@ def extract_embedded_cover(path: Path) -> tuple[bytes, str] | None:
     return None
 
 
+def invalidate_album_cover_cache(album_id: int, covers_dir: Path | None = None) -> None:
+    """Remove cached/extracted covers for an album id. Must be called when an
+    album is deleted or its id is reused, or a new album can inherit a stale
+    image (SQLite reuses autoincrement ids after deletions)."""
+    if covers_dir is None:
+        covers_dir = get_settings().data_dir / "covers"
+    for suffix in (".jpg", ".png"):
+        cached = covers_dir / f"album_{album_id}{suffix}"
+        try:
+            cached.unlink(missing_ok=True)
+        except OSError:
+            logger.warning("Could not remove cached cover %s", cached)
+
+
 def resolve_album_cover(
     db: Session,
     album: Album,

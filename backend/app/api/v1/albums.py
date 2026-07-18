@@ -6,8 +6,8 @@ from fastapi.responses import FileResponse
 from app.api.deps import AdminUserDep, CurrentUserDep, DbDep, MediaUserDep
 from app.models.library import Album
 from app.schemas.common import Page
-from app.schemas.library import AlbumDetail, AlbumRead
-from app.services import catalog, covers, tag_editor
+from app.schemas.library import AlbumDetail, AlbumRead, LibraryDeleteResult
+from app.services import catalog, covers, library_editor, tag_editor
 from app.services.tag_editor import InvalidImageError
 
 router = APIRouter()
@@ -45,6 +45,16 @@ def read_album(album_id: int, db: DbDep, _user: CurrentUserDep) -> AlbumDetail:
     detail = AlbumDetail.model_validate(album)
     detail.track_count = len(album.tracks)
     return detail
+
+
+@router.delete("/{album_id}", response_model=LibraryDeleteResult)
+def delete_album(album_id: int, db: DbDep, _admin: AdminUserDep) -> LibraryDeleteResult:
+    """Remove the album and all its tracks: the audio files are deleted from disk."""
+    album = catalog.get_album(db, album_id)
+    if album is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
+    deleted, errors = library_editor.delete_album(db, album)
+    return LibraryDeleteResult(deleted_files=deleted, errors=errors)
 
 
 @router.put("/{album_id}/cover", status_code=status.HTTP_204_NO_CONTENT)

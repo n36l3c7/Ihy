@@ -6,10 +6,10 @@ from fastapi.responses import FileResponse
 
 from app.api.deps import AdminUserDep, CurrentUserDep, DbDep, MediaUserDep
 from app.schemas.common import Page
-from app.schemas.library import TrackRead
+from app.schemas.library import LibraryDeleteResult, TrackRead
 from app.schemas.lyrics import LyricsRead
 from app.schemas.tags import BatchTagsRequest, BatchTagsResult, TrackFileTags, TrackTagsUpdate
-from app.services import catalog, tag_editor
+from app.services import catalog, library_editor, tag_editor
 from app.services import lyrics as lyrics_service
 from app.services.catalog import TrackSort
 from app.services.tag_editor import FileMissingError, UnsupportedFormatError
@@ -107,6 +107,16 @@ def edit_track_tags(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from None
     except UnsupportedFormatError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+
+
+@router.delete("/{track_id}", response_model=LibraryDeleteResult)
+def delete_track(track_id: int, db: DbDep, _admin: AdminUserDep) -> LibraryDeleteResult:
+    """Remove the track from the platform: the audio file is deleted from disk."""
+    track = catalog.get_track(db, track_id)
+    if track is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+    deleted, errors = library_editor.delete_track(db, track)
+    return LibraryDeleteResult(deleted_files=deleted, errors=errors)
 
 
 @router.get("/{track_id}", response_model=TrackRead)
