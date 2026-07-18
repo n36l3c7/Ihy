@@ -25,6 +25,7 @@ from app.models.interactions import Favorite, TrackRating
 from app.models.library import Album, Artist, Genre, Track
 from app.models.lyrics import Lyrics
 from app.models.playlist import Playlist, PlaylistItem
+from app.models.radio import RadioStation
 from app.models.user import User
 from app.services import artist_images, covers, transcoder, user_library
 from app.services.scrobbler import scrobble_async
@@ -771,6 +772,28 @@ def get_starred2(request: Request, db: DbDep) -> Response:
     return subsonic_response(
         request,
         {key: {"artist": [], "album": [], "song": [_song_entry(track) for track in tracks]}},
+    )
+
+
+@sub_get("/getInternetRadioStations")
+def get_internet_radio_stations(request: Request, db: DbDep) -> Response:
+    authenticate(request, db)
+    stations = list(db.scalars(select(RadioStation).order_by(RadioStation.name)))
+    return subsonic_response(
+        request,
+        {
+            "internetRadioStations": {
+                "internetRadioStation": [
+                    {
+                        "id": f"rs-{station.id}",
+                        "name": station.name,
+                        "streamUrl": station.stream_url,
+                        "homePageUrl": station.homepage_url,
+                    }
+                    for station in stations
+                ]
+            }
+        },
     )
 
 

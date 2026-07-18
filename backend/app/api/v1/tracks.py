@@ -10,7 +10,7 @@ from app.schemas.common import Page
 from app.schemas.library import LibraryDeleteResult, TrackRead
 from app.schemas.lyrics import LyricsRead
 from app.schemas.tags import BatchTagsRequest, BatchTagsResult, TrackFileTags, TrackTagsUpdate
-from app.services import catalog, library_editor, tag_editor, transcoder, waveforms
+from app.services import catalog, library_editor, musicbrainz, tag_editor, transcoder, waveforms
 from app.services import lyrics as lyrics_service
 from app.services.catalog import TrackSort
 from app.services.tag_editor import FileMissingError, UnsupportedFormatError
@@ -59,6 +59,60 @@ def list_tracks(
         offset=offset,
     )
     return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+
+class AutotagSuggestion(BaseModel):
+    title: str
+    artists: list[str]
+    album: str | None
+    year: int | None
+    score: int
+    release_id: str | None
+    cover_url: str | None
+
+
+@router.get("/{track_id}/autotag", response_model=list[AutotagSuggestion])
+def autotag_suggestions(track_id: int, db: DbDep, _admin: AdminUserDep) -> list[dict]:
+    """MusicBrainz tag suggestions for the track's current title/artist."""
+    track = catalog.get_track(db, track_id)
+    if track is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+    artist = track.artists[0].name if track.artists else None
+    try:
+        return musicbrainz.search_recordings(track.title, artist)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail="MusicBrainz not reachable"
+        ) from None
+
+
+class CoverFromReleaseRequest(BaseModel):
+    release_id: str
+
+
+@router.post("/{track_id}/autotag/cover", status_code=status.HTTP_204_NO_CONTENT)
+def apply_autotag_cover(
+    track_id: int, payload: CoverFromReleaseRequest, db: DbDep, _admin: AdminUserDep
+) -> None:
+    """Set the album cover from a MusicBrainz release (Cover Art Archive)."""
+    track = catalog.get_track(db, track_id)
+    if track is None or track.album is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Track or album not found"
+        )
+    try:
+        data = musicbrainz.fetch_cover(payload.release_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="No cover available for this release",
+        ) from None
+    try:
+        tag_editor.save_album_cover(db, track.album, data)
+    except tag_editor.InvalidImageError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from None
 
 
 class WaveformRead(BaseModel):

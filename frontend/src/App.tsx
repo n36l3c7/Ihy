@@ -30,6 +30,8 @@ import { HomePage } from "./features/library/HomePage";
 import { GenresPage } from "./features/library/GenresPage";
 import { HistoryPage } from "./features/library/HistoryPage";
 import { LibraryHubPage } from "./features/library/LibraryHubPage";
+import { RadioPage } from "./features/library/RadioPage";
+import { WrappedPage } from "./features/library/WrappedPage";
 import { StatsPage } from "./features/library/StatsPage";
 import { TracksPage } from "./features/library/TracksPage";
 import { PlaylistPage } from "./features/playlists/PlaylistPage";
@@ -79,6 +81,8 @@ const router = createBrowserRouter([
           { path: "/folders", element: <FoldersPage /> },
           { path: "/bookmarks", element: <BookmarksPage /> },
           { path: "/downloads", element: <DownloadsPage /> },
+          { path: "/radio", element: <RadioPage /> },
+          { path: "/wrapped", element: <WrappedPage /> },
           { path: "/stats", element: <StatsPage /> },
           { path: "/playlists/:playlistId", element: <PlaylistPage /> },
           { path: "/smart/:smartId", element: <SmartPlaylistPage /> },

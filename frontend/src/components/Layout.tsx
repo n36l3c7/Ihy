@@ -4,6 +4,7 @@ import {
   ChartColumn,
   CloudDownload,
   Compass,
+  Crown,
   Disc3,
   Folder,
   HardDriveDownload,
@@ -19,6 +20,7 @@ import {
   Play,
   Plus,
   Radio,
+  RadioTower,
   Search,
   Settings,
   Sparkles,
@@ -62,6 +64,7 @@ const LIBRARY_ITEMS = [
   { to: "/albums", label: "Albums", icon: Disc3 },
   { to: "/genres", label: "Genres", icon: Tags },
   { to: "/folders", label: "Folders", icon: Folder },
+  { to: "/radio", label: "Radio", icon: RadioTower },
 ];
 
 const PERSONAL_ITEMS = [
@@ -70,6 +73,7 @@ const PERSONAL_ITEMS = [
   { to: "/bookmarks", label: "Bookmarks", icon: Bookmark },
   { to: "/downloads", label: "Downloads", icon: HardDriveDownload },
   { to: "/stats", label: "Statistics", icon: ChartColumn },
+  { to: "/wrapped", label: "Wrapped", icon: Crown },
 ];
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>

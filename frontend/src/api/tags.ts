@@ -1,4 +1,23 @@
 import { api } from "./http";
+
+export interface AutotagSuggestion {
+  title: string;
+  artists: string[];
+  album: string | null;
+  year: number | null;
+  score: number;
+  release_id: string | null;
+  cover_url: string | null;
+}
+
+export const getAutotagSuggestions = (trackId: number) =>
+  api<AutotagSuggestion[]>(`/tracks/${trackId}/autotag`);
+
+export const applyAutotagCover = (trackId: number, releaseId: string) =>
+  api<void>(`/tracks/${trackId}/autotag/cover`, {
+    method: "POST",
+    body: JSON.stringify({ release_id: releaseId }),
+  });
 import type { Track } from "./types";
 
 export interface TrackTagsUpdate {

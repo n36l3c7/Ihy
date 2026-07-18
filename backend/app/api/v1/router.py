@@ -13,6 +13,7 @@ from app.api.v1 import (
     mixes,
     playlists,
     queues,
+    radio,
     ratings,
     scrobbling,
     settings,
@@ -42,6 +43,7 @@ api_router.include_router(
 api_router.include_router(scrobbling.router, prefix="/scrobbling", tags=["scrobbling"])
 api_router.include_router(ratings.router, prefix="/ratings", tags=["ratings"])
 api_router.include_router(mixes.router, prefix="/mixes", tags=["mixes"])
+api_router.include_router(radio.router, prefix="/radio-stations", tags=["radio"])
 api_router.include_router(history.router, prefix="/history", tags=["history"])
 api_router.include_router(queues.router, prefix="/queues", tags=["queues"])
 api_router.include_router(stats.router, prefix="/stats", tags=["stats"])

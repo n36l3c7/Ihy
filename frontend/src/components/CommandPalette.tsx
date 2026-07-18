@@ -30,6 +30,8 @@ const PAGES: { label: string; to: string }[] = [
   { label: "Albums", to: "/albums" },
   { label: "Genres", to: "/genres" },
   { label: "Folders", to: "/folders" },
+  { label: "Radio", to: "/radio" },
+  { label: "Wrapped", to: "/wrapped" },
   { label: "Liked songs", to: "/favorites" },
   { label: "Recently played", to: "/history" },
   { label: "Bookmarks", to: "/bookmarks" },

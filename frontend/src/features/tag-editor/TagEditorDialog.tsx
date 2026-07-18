@@ -1,7 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Wand2 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 
-import { getFileTags, type TrackTagsUpdate, updateTrackTags } from "../../api/tags";
+import {
+  applyAutotagCover,
+  type AutotagSuggestion,
+  getAutotagSuggestions,
+  getFileTags,
+  type TrackTagsUpdate,
+  updateTrackTags,
+} from "../../api/tags";
 import type { Track } from "../../api/types";
 import { CoverImage } from "../../components/CoverImage";
 import { Modal } from "../../components/Modal";
@@ -35,6 +43,35 @@ export function TagEditorDialog({ track, onClose }: TagEditorDialogProps) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState | null>(null);
   const [initial, setInitial] = useState<FormState | null>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+
+  const suggestions = useQuery({
+    queryKey: ["autotag", track.id],
+    queryFn: () => getAutotagSuggestions(track.id),
+    enabled: suggestOpen,
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  const coverMutation = useMutation({
+    mutationFn: (releaseId: string) => applyAutotagCover(track.id, releaseId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["album"] }),
+  });
+
+  const applySuggestion = (suggestion: AutotagSuggestion) => {
+    setForm(
+      (current) =>
+        current && {
+          ...current,
+          title: suggestion.title || current.title,
+          artists: suggestion.artists.length
+            ? suggestion.artists.join("; ")
+            : current.artists,
+          album: suggestion.album ?? current.album,
+          date: suggestion.year !== null ? String(suggestion.year) : current.date,
+        },
+    );
+  };
 
   const fileTags = useQuery({
     queryKey: ["file-tags", track.id],
@@ -131,6 +168,67 @@ export function TagEditorDialog({ track, onClose }: TagEditorDialogProps) {
         <p className="py-8 text-center text-red-400">Failed to read tags from the file.</p>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setSuggestOpen((open) => !open)}
+              className="flex items-center gap-1.5 rounded-full border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-300 transition-colors hover:border-emerald-600 hover:text-emerald-400"
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+              Suggest tags (MusicBrainz)
+            </button>
+            {coverMutation.isSuccess && (
+              <span className="text-xs text-emerald-500">Cover updated.</span>
+            )}
+          </div>
+          {suggestOpen && (
+            <div className="rounded-md border border-zinc-800 bg-zinc-950/60 p-2">
+              {suggestions.isPending ? (
+                <p className="px-2 py-3 text-xs text-zinc-500">Searching MusicBrainz...</p>
+              ) : suggestions.isError ? (
+                <p className="px-2 py-3 text-xs text-red-400">MusicBrainz not reachable.</p>
+              ) : suggestions.data.length === 0 ? (
+                <p className="px-2 py-3 text-xs text-zinc-500">No matches found.</p>
+              ) : (
+                <ul className="divide-y divide-zinc-800/60">
+                  {suggestions.data.map((suggestion, index) => (
+                    <li key={index} className="flex items-center gap-2 px-2 py-1.5">
+                      <span className="min-w-0 flex-1 text-xs text-zinc-300">
+                        <span className="font-medium text-zinc-100">
+                          {suggestion.title}
+                        </span>{" "}
+                        — {suggestion.artists.join(", ")}
+                        {suggestion.album && (
+                          <span className="text-zinc-500">
+                            {" "}
+                            · {suggestion.album}
+                            {suggestion.year ? ` (${suggestion.year})` : ""}
+                          </span>
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => applySuggestion(suggestion)}
+                        className="shrink-0 rounded-full px-2.5 py-1 text-xs text-emerald-400 transition-colors hover:bg-zinc-800"
+                      >
+                        Use tags
+                      </button>
+                      {suggestion.release_id && track.album && (
+                        <button
+                          type="button"
+                          onClick={() => coverMutation.mutate(suggestion.release_id!)}
+                          disabled={coverMutation.isPending}
+                          className="shrink-0 rounded-full px-2.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                        >
+                          Use cover
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           <div className="flex items-start gap-4">
             <CoverImage
               albumId={track.album?.id}
