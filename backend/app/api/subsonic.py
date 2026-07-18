@@ -19,6 +19,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import DbDep
+from app.core.config import get_settings
 from app.models.artist_info import ArtistInfo
 from app.models.interactions import Favorite
 from app.models.library import Album, Artist, Genre, Track
@@ -89,7 +90,7 @@ def subsonic_response(request: Request, payload: dict | None = None) -> Response
         "status": "ok",
         "version": SUBSONIC_VERSION,
         "type": SERVER_TYPE,
-        "serverVersion": SUBSONIC_VERSION,
+        "serverVersion": get_settings().version,
         "openSubsonic": True,
     }
     if payload:
@@ -109,7 +110,7 @@ def subsonic_error_response(request: Request, code: int, message: str) -> Respon
         "status": "failed",
         "version": SUBSONIC_VERSION,
         "type": SERVER_TYPE,
-        "serverVersion": SUBSONIC_VERSION,
+        "serverVersion": get_settings().version,
         "openSubsonic": True,
         "error": {"code": code, "message": message},
     }

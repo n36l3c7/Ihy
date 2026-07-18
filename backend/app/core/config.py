@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="IHY_", env_file=".env", extra="ignore")
 
     app_name: str = "Ihy"
-    version: str = "0.1.0"
+    version: str = "1.0.0"
     debug: bool = False
 
     # Storage
