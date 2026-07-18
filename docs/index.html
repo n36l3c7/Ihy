@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ihy — self-hosted music with an ancient soul</title>
+<meta name="description" content="Ihy is a self-hosted music server and web player: gapless playback, smart playlists, tag editing, OpenSubsonic API, offline PWA — named after the Egyptian god of music.">
+<meta property="og:title" content="Ihy — self-hosted music with an ancient soul">
+<meta property="og:description" content="Gapless playback, smart playlists, tag editing, OpenSubsonic API, offline PWA. One Docker image.">
+<meta property="og:image" content="https://n36l3c7.github.io/Ihy/assets/banner.png">
+<meta property="og:type" content="website">
+<link rel="icon" href="assets/icon-192.png">
+<style>
+  :root {
+    --night: #14100b;
+    --night2: #1d160e;
+    --panel: #1a1410;
+    --line: #382c1f;
+    --gold: #d9a441;
+    --gold-light: #f2c96b;
+    --faience: #3fb8a5;
+    --sand: #eadfc4;
+    --muted: #a6926e;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans: system-ui, "Segoe UI", sans-serif;
+    --mono: "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--night);
+    color: var(--sand);
+    font-family: var(--sans);
+    font-size: 16.5px;
+    line-height: 1.65;
+  }
+  a { color: var(--faience); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+  .frieze {
+    height: 12px;
+    background: repeating-linear-gradient(90deg, var(--gold) 0 10px, transparent 10px 26px);
+    opacity: .35;
+  }
+
+  /* Hero */
+  .hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
+  .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .hero .veil {
+    position: absolute; inset: 0;
+    background: radial-gradient(75% 75% at 50% 45%, rgba(20, 16, 11, .92) 0%, rgba(20, 16, 11, .4) 70%, transparent 100%);
+  }
+  .hero .inner {
+    position: relative;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 96px 24px 84px;
+    text-align: center;
+  }
+  .hero img.mark { width: 132px; height: 132px; border-radius: 26%; box-shadow: 0 12px 60px rgba(217, 164, 65, .22); }
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(58px, 11vw, 110px);
+    font-weight: 700;
+    letter-spacing: .18em;
+    margin: 26px 0 4px -.09em;
+    line-height: 1;
+    background: linear-gradient(180deg, var(--gold-light), #b3801f);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero .tagline {
+    font-size: clamp(12px, 2.2vw, 16px);
+    letter-spacing: .32em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .hero .tagline em { color: var(--faience); font-style: normal; }
+  .hero p.pitch { max-width: 60ch; margin: 26px auto 0; color: var(--sand); opacity: .9; }
+  .cta { margin-top: 34px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-block;
+    padding: 12px 26px;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: .04em;
+  }
+  .btn.gold { background: linear-gradient(180deg, var(--gold-light), var(--gold)); color: #1c1408; }
+  .btn.gold:hover { text-decoration: none; filter: brightness(1.06); }
+  .btn.ghost { border: 1px solid var(--line); color: var(--sand); }
+  .btn.ghost:hover { border-color: var(--gold); text-decoration: none; }
+
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 72px 0 8px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 5px 16px;
+    font-size: 11px; letter-spacing: .24em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .eyebrow::after { content: ""; width: 3px; height: 13px; background: var(--gold); border-radius: 2px; }
+  h2 {
+    font-family: var(--serif);
+    font-size: 26px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin: 14px 0 8px;
+  }
+  .lead { color: var(--muted); max-width: 64ch; margin: 0 0 30px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px 24px;
+  }
+  .card h3 {
+    margin: 0 0 10px;
+    font-family: var(--serif);
+    font-size: 17px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--gold-light);
+  }
+  .card ul { margin: 0; padding: 0; list-style: none; }
+  .card li { padding: 5px 0 5px 20px; position: relative; font-size: 14.5px; color: var(--sand); }
+  .card li::before {
+    content: "";
+    position: absolute; left: 0; top: 13px;
+    width: 8px; height: 8px;
+    background: var(--faience);
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  }
+
+  .install {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .install .bar {
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .install pre {
+    margin: 0;
+    padding: 22px 24px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--sand);
+  }
+  .install .c { color: var(--muted); }
+  .install .g { color: var(--gold-light); }
+  .req { margin-top: 16px; color: var(--muted); font-size: 14px; }
+
+  .apps { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+  .chip {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 16px;
+    font-size: 13px;
+    color: var(--sand);
+  }
+  .chip b { color: var(--faience); font-weight: 500; }
+
+  .themes { display: flex; gap: 14px; flex-wrap: wrap; }
+  .theme { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--muted); }
+  .theme i { width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--line); }
+
+  footer {
+    margin-top: 84px;
+    border-top: 1px solid var(--line);
+    padding: 34px 24px 46px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+  footer .links { display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+
+<div class="frieze"></div>
+
+<header class="hero">
+  <canvas id="rain" aria-hidden="true"></canvas>
+  <div class="veil"></div>
+  <div class="inner">
+    <img class="mark" src="assets/icon-512.png" alt="The Ihy sistrum mark" width="132" height="132">
+    <h1>IHY</h1>
+    <div class="tagline">Self-hosted music · <em>ancient soul</em></div>
+    <p class="pitch">
+      Your music, on your hardware, named after the Egyptian god of music.
+      A fast multi-user web player with gapless playback, a full tag editor,
+      smart playlists, automatic downloads — and an API your phone already speaks.
+    </p>
+    <div class="cta">
+      <a class="btn gold" href="#install">Install with Docker</a>
+      <a class="btn ghost" href="https://github.com/n36l3c7/Ihy">GitHub ↗</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="features">
+    <span class="eyebrow">Features</span>
+    <h2>Everything a player should do</h2>
+    <p class="lead">Built for people who keep their own files — and expect the polish of a streaming service.</p>
+    <div class="grid">
+      <div class="card">
+        <h3>Playback</h3>
+        <ul>
+          <li>Gapless + crossfade (3–12s)</li>
+          <li>10-band EQ, speed, sleep timer</li>
+          <li>ReplayGain volume normalization</li>
+          <li>Autoplay radio at queue end</li>
+          <li>Synced karaoke lyrics</li>
+          <li>Cross-tab control &amp; Chromecast</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Library</h3>
+        <ul>
+          <li>Artists, albums, genres, folders</li>
+          <li>Full tag editor, single &amp; batch</li>
+          <li>Multi-artist tag splitting</li>
+          <li>Smart playlists with rules</li>
+          <li>M3U / XSPF import &amp; export</li>
+          <li>Covers, artist images &amp; bios</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Integrations</h3>
+        <ul>
+          <li>OpenSubsonic API for mobile apps</li>
+          <li>ListenBrainz &amp; Last.fm scrobbling</li>
+          <li>spotdl watches on a schedule</li>
+          <li>Opus transcoding with cache</li>
+          <li>Lyrics from lrclib.net</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Platform</h3>
+        <ul>
+          <li>Installable PWA, offline downloads</li>
+          <li>Responsive mobile UI</li>
+          <li>Command palette (Ctrl+K)</li>
+          <li>Multi-user, backup &amp; restore</li>
+          <li>HTTPS out of the box</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <span class="eyebrow">Install</span>
+    <h2>One image, two minutes</h2>
+    <div class="install">
+      <div class="bar">terminal</div>
+      <pre><span class="c"># clone and configure</span>
+git clone https://github.com/n36l3c7/Ihy.git
+cd Ihy/docker
+echo "IHY_SECRET_KEY=$(openssl rand -hex 32)" &gt; .env
+
+<span class="c"># mount your music in docker-compose.yml, then</span>
+docker compose up -d --build
+
+<span class="c"># first run: create the admin account and scan your folders</span>
+<span class="g">https://localhost:8000</span></pre>
+    </div>
+    <p class="req">
+      Needs Docker Engine 24+ and ~1 GB of RAM. Python, Node, ffmpeg, spotdl and a
+      self-signed HTTPS certificate are all handled inside the image.
+      Full details in the <a href="https://github.com/n36l3c7/Ihy#installation">README</a>.
+    </p>
+  </section>
+
+  <section id="apps">
+    <span class="eyebrow">Bring your own apps</span>
+    <h2>Speaks OpenSubsonic</h2>
+    <p class="lead">
+      Connect the mobile clients you already love with a dedicated per-user secret —
+      your real password never leaves the web app.
+    </p>
+    <div class="apps">
+      <span class="chip"><b>Symfonium</b> · Android</span>
+      <span class="chip"><b>Tempo</b> · Android</span>
+      <span class="chip"><b>DSub</b> · Android</span>
+      <span class="chip"><b>play:Sub</b> · iOS</span>
+      <span class="chip"><b>Ihy PWA</b> · everywhere</span>
+    </div>
+  </section>
+
+  <section id="themes">
+    <span class="eyebrow">Themes</span>
+    <h2>Eight moods, one temple</h2>
+    <p class="lead">From the default Emerald to the Egypt-x-cyberpunk Neon Nile and the VHS-white Glitch.</p>
+    <div class="themes">
+      <span class="theme"><i style="background:#10b981"></i>Emerald</span>
+      <span class="theme"><i style="background:#8b5cf6"></i>Violet</span>
+      <span class="theme"><i style="background:#3b82f6"></i>Ocean</span>
+      <span class="theme"><i style="background:#f43f5e"></i>Rose</span>
+      <span class="theme"><i style="background:#f59e0b"></i>Amber</span>
+      <span class="theme"><i style="background:#fafafa"></i>Monochrome</span>
+      <span class="theme"><i style="background:#00e5c7"></i>Neon Nile</span>
+      <span class="theme"><i style="background:linear-gradient(90deg,#ff3d81,#fff,#00e5ff)"></i>Glitch</span>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="links">
+    <a href="https://github.com/n36l3c7/Ihy">Source</a>
+    <a href="https://github.com/n36l3c7/Ihy/releases">Releases</a>
+    <a href="https://github.com/n36l3c7/Ihy/blob/main/docs/architecture.md">Architecture</a>
+    <a href="https://en.wikipedia.org/wiki/Ihy">Who is Ihy?</a>
+  </div>
+  Named after Ihy, god of music, son of Hathor — player of the sistrum.
+</footer>
+
+<div class="frieze"></div>
+
+<script>
+  // Faint rain of Egyptian glyphs behind the hero
+  const canvas = document.getElementById("rain");
+  const ctx = canvas.getContext("2d");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const CELL = 30;
+  const glyphs = [
+    (c) => { c.beginPath(); c.arc(0, -3, 2.4, 0, 7); c.moveTo(0, -.6); c.lineTo(0, 5); c.moveTo(-3, 1.4); c.lineTo(3, 1.4); c.stroke(); },
+    (c) => { c.beginPath(); c.moveTo(-4, 0); c.quadraticCurveTo(0, -4.4, 4, 0); c.quadraticCurveTo(0, 4.4, -4, 0); c.stroke(); c.beginPath(); c.arc(0, 0, 1.3, 0, 7); c.stroke(); },
+    (c) => { c.beginPath(); c.moveTo(-4, -2); c.lineTo(-2, -4); c.lineTo(0, -2); c.lineTo(2, -4); c.lineTo(4, -2); c.moveTo(-4, 2); c.lineTo(-2, 0); c.lineTo(0, 2); c.lineTo(2, 0); c.lineTo(4, 2); c.stroke(); },
+    (c) => { c.beginPath(); c.moveTo(0, -4); c.lineTo(4.4, 3.6); c.lineTo(-4.4, 3.6); c.closePath(); c.stroke(); },
+    (c) => { c.beginPath(); c.arc(0, 0, 3.4, 0, 7); c.moveTo(1.2, 0); c.arc(0, 0, 1.2, 0, 7); c.stroke(); },
+    (c) => { c.beginPath(); c.moveTo(0, -4); c.lineTo(0, 5); for (let y = -3; y <= 0; y += 1.6) { c.moveTo(-3, y); c.lineTo(3, y); } c.stroke(); },
+  ];
+  let columns = [];
+  function resize() {
+    const box = canvas.parentElement.getBoundingClientRect();
+    canvas.width = box.width * devicePixelRatio;
+    canvas.height = box.height * devicePixelRatio;
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    columns = Array.from({ length: Math.ceil(box.width / CELL) }, (_, i) => ({
+      x: i * CELL + CELL / 2,
+      y: Math.random() * box.height,
+      speed: 26 + Math.random() * 55,
+      gold: Math.random() < .3,
+    }));
+    ctx.fillStyle = "#14100b";
+    ctx.fillRect(0, 0, box.width, box.height);
+  }
+  function drawGlyph(x, y, alpha, gold) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.lineWidth = 1.3;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = gold ? `rgba(217,164,65,${alpha})` : `rgba(63,184,165,${alpha})`;
+    glyphs[(Math.random() * glyphs.length) | 0](ctx);
+    ctx.restore();
+  }
+  let last = 0;
+  function frame(now) {
+    const dt = Math.min(.05, (now - last) / 1000 || .016);
+    last = now;
+    const box = canvas.parentElement.getBoundingClientRect();
+    ctx.fillStyle = "rgba(20,16,11,0.12)";
+    ctx.fillRect(0, 0, box.width, box.height);
+    for (const col of columns) {
+      col.y += col.speed * dt;
+      if (col.y > box.height + CELL) { col.y = -CELL; }
+      if (Math.random() < .4) drawGlyph(col.x, col.y, .55, col.gold);
+    }
+    requestAnimationFrame(frame);
+  }
+  resize();
+  addEventListener("resize", resize);
+  if (reduced) {
+    const box = canvas.parentElement.getBoundingClientRect();
+    for (const col of columns) {
+      for (let y = CELL; y < box.height; y += CELL) {
+        if (Math.random() < .25) drawGlyph(col.x, y, .08 + Math.random() * .3, col.gold);
+      }
+    }
+  } else {
+    requestAnimationFrame(frame);
+  }
+</script>
+</body>
+</html>
