@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 
 import { Layout } from "./components/Layout";
+import { DownloadsPage } from "./features/admin/DownloadsPage";
 import { LibrarySettingsPage } from "./features/admin/LibrarySettingsPage";
 import { SettingsLayout } from "./features/admin/SettingsLayout";
 import { SourcesPage } from "./features/admin/SourcesPage";
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
               { path: "sources", element: <SourcesPage /> },
               { path: "library", element: <LibrarySettingsPage /> },
               { path: "users", element: <UsersPage /> },
+              { path: "downloads", element: <DownloadsPage /> },
             ],
           },
           { path: "*", element: <Navigate to="/tracks" replace /> },

@@ -7,6 +7,9 @@ from app.models.app_setting import AppSetting
 METADATA_SEPARATORS_KEY = "metadata_separators"
 DEFAULT_METADATA_SEPARATORS = ["/", ";"]
 
+DOWNLOAD_INTERVAL_KEY = "download_check_interval_hours"
+DEFAULT_DOWNLOAD_INTERVAL_HOURS = 24
+
 
 def _get_raw(db: Session, key: str) -> str | None:
     setting = db.get(AppSetting, key)
@@ -38,3 +41,19 @@ def get_metadata_separators(db: Session) -> list[str]:
 
 def set_metadata_separators(db: Session, separators: list[str]) -> None:
     _set_raw(db, METADATA_SEPARATORS_KEY, json.dumps(separators))
+
+
+def get_download_interval_hours(db: Session) -> int:
+    """Hours between automatic spotdl watch checks. 0 disables the schedule."""
+    raw = _get_raw(db, DOWNLOAD_INTERVAL_KEY)
+    if raw is None:
+        return DEFAULT_DOWNLOAD_INTERVAL_HOURS
+    try:
+        value = int(json.loads(raw))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return DEFAULT_DOWNLOAD_INTERVAL_HOURS
+    return max(0, value)
+
+
+def set_download_interval_hours(db: Session, hours: int) -> None:
+    _set_raw(db, DOWNLOAD_INTERVAL_KEY, json.dumps(hours))

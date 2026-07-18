@@ -28,6 +28,9 @@ dev = [
     "httpx>=0.27",
     "ruff>=0.6",
 ]
+spotdl = [
+    "spotdl>=4.2",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
@@ -39,6 +42,10 @@ extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# conftest sets environment variables before importing app modules
+"tests/conftest.py" = ["E402"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

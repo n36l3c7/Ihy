@@ -4,6 +4,7 @@ from app.api.v1 import (
     albums,
     artists,
     auth,
+    downloads,
     favorites,
     genres,
     history,
@@ -30,6 +31,7 @@ api_router.include_router(favorites.router, prefix="/favorites", tags=["favorite
 api_router.include_router(playlists.router, prefix="/playlists", tags=["playlists"])
 api_router.include_router(history.router, prefix="/history", tags=["history"])
 api_router.include_router(settings.router, prefix="/settings", tags=["settings"])
+api_router.include_router(downloads.router, prefix="/downloads", tags=["downloads"])
 
 
 @api_router.get("/health")

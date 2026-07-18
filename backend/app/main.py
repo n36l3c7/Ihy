@@ -1,3 +1,6 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -6,6 +9,17 @@ from starlette.responses import Response
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
+from app.workers.scheduler import shutdown_scheduler, start_scheduler
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    if get_settings().enable_scheduler:
+        start_scheduler()
+        yield
+        shutdown_scheduler()
+    else:
+        yield
 
 
 class SpaStaticFiles(StaticFiles):
@@ -23,7 +37,7 @@ class SpaStaticFiles(StaticFiles):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title=settings.app_name, version=settings.version)
+    app = FastAPI(title=settings.app_name, version=settings.version, lifespan=_lifespan)
 
     app.add_middleware(
         CORSMiddleware,

@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 30
 
+    # Background jobs (disabled in tests)
+    enable_scheduler: bool = True
+
     # Development
     cors_origins: list[str] = ["http://localhost:5173"]
 

@@ -1,0 +1,110 @@
+import importlib.util
+import logging
+import subprocess
+import sys
+import threading
+from collections.abc import Callable
+from datetime import UTC, datetime
+from pathlib import Path
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
+
+from app.db.session import SessionLocal
+from app.models.downloads import DownloadWatch
+from app.services.scan_manager import scan_manager
+
+logger = logging.getLogger(__name__)
+
+SPOTDL_TIMEOUT_SECONDS = 3600
+
+# runner(query, output_dir) -> (success, output tail)
+SpotdlRunner = Callable[[str, Path], "tuple[bool, str]"]
+
+
+def spotdl_available() -> bool:
+    return importlib.util.find_spec("spotdl") is not None
+
+
+def run_spotdl(query: str, output_dir: Path) -> tuple[bool, str]:
+    """Download a query with the spotdl CLI. Existing files are skipped by spotdl."""
+    template = str(output_dir / "{artist}" / "{album}" / "{title}.{output-ext}")
+    command = [sys.executable, "-m", "spotdl", "download", query, "--output", template]
+    try:
+        completed = subprocess.run(
+            command, capture_output=True, text=True, timeout=SPOTDL_TIMEOUT_SECONDS, check=False
+        )
+    except subprocess.TimeoutExpired:
+        return False, "spotdl timed out"
+    except OSError as exc:
+        return False, f"Failed to launch spotdl: {exc}"
+    output = (completed.stdout or "") + (completed.stderr or "")
+    return completed.returncode == 0, output[-2000:]
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+class DownloadManager:
+    """Runs spotdl for every enabled watch in a background thread, one run at a time.
+    A library scan is triggered afterwards so new files appear immediately."""
+
+    def __init__(
+        self,
+        session_factory: Callable[[], Session] = SessionLocal,
+        runner: SpotdlRunner = run_spotdl,
+        start_scan: Callable[[], bool] | None = None,
+    ):
+        self._session_factory = session_factory
+        self._runner = runner
+        self._start_scan = start_scan if start_scan is not None else scan_manager.start
+        self._lock = threading.Lock()
+        self._running = False
+        self.current_watch: str | None = None
+        self.last_finished_at: datetime | None = None
+
+    @property
+    def running(self) -> bool:
+        return self._running
+
+    def start(self) -> bool:
+        """Start checking all enabled watches. Returns False when already running."""
+        with self._lock:
+            if self._running:
+                return False
+            self._running = True
+        threading.Thread(target=self._run, name="spotdl-watch-check", daemon=True).start()
+        return True
+
+    def _run(self) -> None:
+        processed = 0
+        try:
+            with self._session_factory() as db:
+                watches = list(
+                    db.scalars(
+                        select(DownloadWatch)
+                        .where(DownloadWatch.enabled.is_(True))
+                        .options(selectinload(DownloadWatch.source))
+                        .order_by(DownloadWatch.id)
+                    )
+                )
+                for watch in watches:
+                    self.current_watch = watch.name
+                    success, detail = self._runner(watch.query, Path(watch.source.path))
+                    watch.last_run_at = _utcnow()
+                    watch.last_status = "ok" if success else "error"
+                    watch.last_error = None if success else detail[-500:]
+                    db.commit()
+                    processed += 1
+            if processed > 0:
+                self._start_scan()
+        except Exception:
+            logger.exception("Download watch check failed")
+        finally:
+            self.current_watch = None
+            self.last_finished_at = _utcnow()
+            self._running = False
+
+
+download_manager = DownloadManager()

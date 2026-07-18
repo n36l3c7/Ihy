@@ -1,3 +1,9 @@
+import os
+
+# Must be set before app modules are imported: background schedulers
+# would otherwise start (and touch the real database) in every test app.
+os.environ.setdefault("IHY_ENABLE_SCHEDULER", "false")
+
 from collections.abc import Callable, Generator
 from pathlib import Path
 from types import SimpleNamespace

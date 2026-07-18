@@ -1,8 +1,10 @@
 from fastapi import APIRouter
 
 from app.api.deps import AdminUserDep, DbDep
+from app.schemas.downloads import DownloadSettings
 from app.schemas.settings import LibrarySettings
 from app.services import app_settings
+from app.workers.scheduler import reschedule_download_job
 
 router = APIRouter()
 
@@ -19,3 +21,17 @@ def update_library_settings(
     """Update library settings. Separator changes apply on the next scan."""
     app_settings.set_metadata_separators(db, payload.metadata_separators)
     return LibrarySettings(metadata_separators=app_settings.get_metadata_separators(db))
+
+
+@router.get("/downloads", response_model=DownloadSettings)
+def get_download_settings(db: DbDep, _admin: AdminUserDep) -> DownloadSettings:
+    return DownloadSettings(check_interval_hours=app_settings.get_download_interval_hours(db))
+
+
+@router.put("/downloads", response_model=DownloadSettings)
+def update_download_settings(
+    payload: DownloadSettings, db: DbDep, _admin: AdminUserDep
+) -> DownloadSettings:
+    app_settings.set_download_interval_hours(db, payload.check_interval_hours)
+    reschedule_download_job()
+    return DownloadSettings(check_interval_hours=app_settings.get_download_interval_hours(db))

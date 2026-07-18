@@ -16,7 +16,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY backend/ ./
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir ".[spotdl]"
 
 COPY --from=frontend-build /build/dist /app/static
 
