@@ -22,14 +22,14 @@ dependencies = [
     "email-validator>=2.0",
 ]
 
+# Note: spotdl is intentionally NOT a dependency — it pins fastapi<0.104,
+# which conflicts with the API. It runs from its own environment instead
+# (see docker/Dockerfile and the IHY_SPOTDL_COMMAND setting).
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
     "httpx>=0.27",
     "ruff>=0.6",
-]
-spotdl = [
-    "spotdl>=4.2",
 ]
 
 [tool.hatch.build.targets.wheel]

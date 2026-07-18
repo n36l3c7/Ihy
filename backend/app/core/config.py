@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # Background jobs (disabled in tests)
     enable_scheduler: bool = True
 
+    # spotdl executable; kept in its own environment because its
+    # dependencies conflict with the API's (fastapi pin)
+    spotdl_command: str = "spotdl"
+
     # Development
     cors_origins: list[str] = ["http://localhost:5173"]
 

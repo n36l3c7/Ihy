@@ -14,14 +14,21 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
+# spotdl lives in its own virtualenv: its dependencies (fastapi<0.104)
+# conflict with the API's
+RUN python -m venv /opt/spotdl \
+    && /opt/spotdl/bin/pip install --no-cache-dir spotdl \
+    && rm -rf /root/.cache
+
 WORKDIR /app
 COPY backend/ ./
-RUN pip install --no-cache-dir ".[spotdl]"
+RUN pip install --no-cache-dir .
 
 COPY --from=frontend-build /build/dist /app/static
 
 ENV IHY_STATIC_DIR=/app/static \
-    IHY_DATA_DIR=/data
+    IHY_DATA_DIR=/data \
+    IHY_SPOTDL_COMMAND=/opt/spotdl/bin/spotdl
 
 VOLUME ["/data", "/music"]
 EXPOSE 8000

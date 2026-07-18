@@ -1,7 +1,6 @@
-import importlib.util
 import logging
+import shutil
 import subprocess
-import sys
 import threading
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -10,6 +9,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models.downloads import DownloadWatch
 from app.services.scan_manager import scan_manager
@@ -22,14 +22,22 @@ SPOTDL_TIMEOUT_SECONDS = 3600
 SpotdlRunner = Callable[[str, Path], "tuple[bool, str]"]
 
 
+def _spotdl_executable() -> str | None:
+    """Resolve the configured spotdl command (name on PATH or absolute path)."""
+    return shutil.which(get_settings().spotdl_command)
+
+
 def spotdl_available() -> bool:
-    return importlib.util.find_spec("spotdl") is not None
+    return _spotdl_executable() is not None
 
 
 def run_spotdl(query: str, output_dir: Path) -> tuple[bool, str]:
     """Download a query with the spotdl CLI. Existing files are skipped by spotdl."""
+    executable = _spotdl_executable()
+    if executable is None:
+        return False, "spotdl executable not found"
     template = str(output_dir / "{artist}" / "{album}" / "{title}.{output-ext}")
-    command = [sys.executable, "-m", "spotdl", "download", query, "--output", template]
+    command = [executable, "download", query, "--output", template]
     try:
         completed = subprocess.run(
             command, capture_output=True, text=True, timeout=SPOTDL_TIMEOUT_SECONDS, check=False
