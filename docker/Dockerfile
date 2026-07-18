@@ -9,9 +9,10 @@ RUN npm run build
 # ---- Stage 2: runtime ----
 FROM python:3.13-slim AS runtime
 
-# ffmpeg: reserved for future transcoding and waveform generation
+# ffmpeg: loudness analysis and Opus transcoding
+# openssl: self-signed certificate generation at first start (entrypoint.sh)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
+    && apt-get install -y --no-install-recommends ffmpeg openssl \
     && rm -rf /var/lib/apt/lists/*
 
 # spotdl lives in its own virtualenv: its dependencies (fastapi<0.104)
@@ -27,6 +28,7 @@ COPY backend/ ./
 RUN pip install --no-cache-dir .
 
 COPY --from=frontend-build /build/dist /app/static
+COPY docker/entrypoint.sh /app/entrypoint.sh
 
 ENV IHY_STATIC_DIR=/app/static \
     IHY_DATA_DIR=/data \
@@ -35,5 +37,5 @@ ENV IHY_STATIC_DIR=/app/static \
 VOLUME ["/data", "/music"]
 EXPOSE 8000
 
-# Apply database migrations, then start the API server
-CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Migrations + HTTPS (self-signed on first start unless IHY_SSL=off) + API
+CMD ["sh", "/app/entrypoint.sh"]

@@ -10,6 +10,13 @@ services:
       # Set the real value in a .env file next to this compose file:
       #   IHY_SECRET_KEY=<output of `openssl rand -hex 32`>
       IHY_SECRET_KEY: "${IHY_SECRET_KEY:-change-me-in-production}"
+      # HTTPS is on by default: a self-signed certificate is generated on
+      # first start into /data/ssl (persists in the data volume). Options:
+      #   IHY_SSL=off                                  -> plain HTTP
+      #   IHY_SSL_SAN=IP:192.168.1.10,DNS:ihy.home     -> extra cert names
+      # To use your own certificate, mount it and set IHY_SSL_CERT/IHY_SSL_KEY.
+      IHY_SSL: "${IHY_SSL:-auto}"
+      IHY_SSL_SAN: "${IHY_SSL_SAN:-}"
     volumes:
       - ihy-data:/data
       - C:/Users/ASUS/Music:/music
