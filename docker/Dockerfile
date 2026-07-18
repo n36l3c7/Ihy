@@ -23,8 +23,13 @@ RUN apt-get update \
 # spotdl lives in its own virtualenv: its dependencies (fastapi<0.104)
 # conflict with the API's. Deno is pre-downloaded at build time because
 # some YouTube downloads require it as a JS runtime.
-RUN python -m venv /opt/spotdl \
-    && /opt/spotdl/bin/pip install --no-cache-dir spotdl \
+# Change SPOTDL_REFRESH (e.g. to the current date) to bust this layer's
+# cache and reinstall the latest spotdl — needed whenever Spotify breaks
+# the credential-less scraping backend and spotdl ships a fix.
+ARG SPOTDL_REFRESH=1
+RUN echo "spotdl refresh: ${SPOTDL_REFRESH}" \
+    && python -m venv /opt/spotdl \
+    && /opt/spotdl/bin/pip install --no-cache-dir --upgrade spotdl \
     && /opt/spotdl/bin/spotdl --download-deno \
     && rm -rf /root/.cache/pip
 

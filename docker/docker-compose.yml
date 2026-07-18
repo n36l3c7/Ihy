@@ -3,6 +3,10 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      args:
+        # Bump to reinstall the latest spotdl, e.g.:
+        #   SPOTDL_REFRESH=$(date +%s) docker compose up -d --build
+        SPOTDL_REFRESH: "${SPOTDL_REFRESH:-1}"
     container_name: ihy
     ports:
       - "8000:8000"
