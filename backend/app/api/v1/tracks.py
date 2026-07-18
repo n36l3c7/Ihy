@@ -7,8 +7,10 @@ from fastapi.responses import FileResponse
 from app.api.deps import AdminUserDep, CurrentUserDep, DbDep, MediaUserDep
 from app.schemas.common import Page
 from app.schemas.library import TrackRead
+from app.schemas.lyrics import LyricsRead
 from app.schemas.tags import BatchTagsRequest, BatchTagsResult, TrackTagsUpdate
 from app.services import catalog, tag_editor
+from app.services import lyrics as lyrics_service
 from app.services.catalog import TrackSort
 from app.services.tag_editor import FileMissingError, UnsupportedFormatError
 
@@ -95,6 +97,17 @@ def read_track(track_id: int, db: DbDep, _user: CurrentUserDep):
     if track is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
     return track
+
+
+@router.get("/{track_id}/lyrics", response_model=LyricsRead)
+def track_lyrics(
+    track_id: int, db: DbDep, _user: CurrentUserDep, refresh: bool = False
+):
+    """Lyrics for a track: embedded tag first, then lrclib.net, cached in the database."""
+    track = catalog.get_track(db, track_id)
+    if track is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+    return lyrics_service.get_or_fetch(db, track, refresh=refresh)
 
 
 @router.get("/{track_id}/stream")

@@ -22,6 +22,8 @@ interface TrackListProps {
   showNumbers?: boolean;
   /** Extra per-row action rendered before the duration (e.g. remove-from-playlist). */
   trailing?: (track: Track, index: number) => ReactNode;
+  /** When provided, rows become draggable and dropping calls this with the move. */
+  onReorder?: (fromIndex: number, toIndex: number) => void;
 }
 
 interface MenuState {
@@ -36,6 +38,7 @@ export function TrackList({
   showCover = true,
   showNumbers = false,
   trailing,
+  onReorder,
 }: TrackListProps) {
   const currentTrack = usePlayerStore(selectCurrentTrack);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
@@ -48,6 +51,8 @@ export function TrackList({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [menu, setMenu] = useState<MenuState | null>(null);
   const lastToggledRef = useRef<number | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   // A new list (page change, filters) resets the selection
   useEffect(() => {
@@ -191,9 +196,43 @@ export function TrackList({
                   event.preventDefault();
                   setMenu({ x: event.clientX, y: event.clientY, index });
                 }}
+                draggable={onReorder !== undefined}
+                onDragStart={onReorder ? () => setDragIndex(index) : undefined}
+                onDragOver={
+                  onReorder
+                    ? (event) => {
+                        event.preventDefault();
+                        setDropIndex(index);
+                      }
+                    : undefined
+                }
+                onDrop={
+                  onReorder
+                    ? (event) => {
+                        event.preventDefault();
+                        if (dragIndex !== null && dragIndex !== index) {
+                          onReorder(dragIndex, index);
+                        }
+                        setDragIndex(null);
+                        setDropIndex(null);
+                      }
+                    : undefined
+                }
+                onDragEnd={
+                  onReorder
+                    ? () => {
+                        setDragIndex(null);
+                        setDropIndex(null);
+                      }
+                    : undefined
+                }
                 className={`group flex w-full cursor-pointer select-none items-center gap-3 rounded-md px-3 py-2 text-left transition-colors ${
                   isSelected ? "bg-emerald-600/10" : "hover:bg-zinc-800/60"
-                }`}
+                } ${
+                  dropIndex === index && dragIndex !== null && dragIndex !== index
+                    ? "border-t-2 border-emerald-500"
+                    : ""
+                } ${dragIndex === index ? "opacity-40" : ""}`}
               >
                 <span
                   className={`w-5 shrink-0 ${

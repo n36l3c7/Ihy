@@ -8,6 +8,7 @@ import {
   getPlaylist,
   removePlaylistItem,
   renamePlaylist,
+  updatePlaylistOrder,
 } from "../../api/userLibrary";
 import { PageSpinner } from "../../components/Spinner";
 import { formatTotalDuration } from "../../lib/format";
@@ -50,6 +51,11 @@ export function PlaylistPage() {
     onSuccess: invalidate,
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: (itemIds: number[]) => updatePlaylistOrder(id, itemIds),
+    onSuccess: invalidate,
+  });
+
   if (query.isPending) return <PageSpinner />;
   if (query.isError) {
     return <p className="py-12 text-center text-red-400">Failed to load playlist.</p>;
@@ -57,6 +63,13 @@ export function PlaylistPage() {
   const playlist = query.data;
   const tracks = playlist.items.map((item) => item.track);
   const totalDuration = tracks.reduce((sum, track) => sum + track.duration, 0);
+
+  const handleReorder = (fromIndex: number, toIndex: number) => {
+    const itemIds = playlist.items.map((item) => item.id);
+    const [moved] = itemIds.splice(fromIndex, 1);
+    itemIds.splice(toIndex, 0, moved);
+    reorderMutation.mutate(itemIds);
+  };
 
   const commitRename = () => {
     const name = editedName?.trim();
@@ -118,6 +131,7 @@ export function PlaylistPage() {
       ) : (
         <TrackList
           tracks={tracks}
+          onReorder={handleReorder}
           trailing={(_track, index) => {
             const item = playlist.items[index];
             const handleRemove = (event: MouseEvent) => {

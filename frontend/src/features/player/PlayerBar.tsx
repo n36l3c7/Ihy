@@ -1,4 +1,5 @@
 import {
+  MicVocal,
   Pause,
   Play,
   Repeat,
@@ -8,12 +9,14 @@ import {
   SkipForward,
   Volume2,
 } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router";
 
 import { CoverImage } from "../../components/CoverImage";
 import { FavoriteButton } from "../../components/FavoriteButton";
 import { formatDuration } from "../../lib/format";
 import { selectCurrentTrack, usePlayerStore } from "../../stores/playerStore";
+import { LyricsDialog } from "./LyricsDialog";
 import { usePlayerAudio } from "./usePlayerAudio";
 
 export function PlayerBar() {
@@ -28,6 +31,7 @@ export function PlayerBar() {
   const cycleRepeat = usePlayerStore((state) => state.cycleRepeat);
   const setVolume = usePlayerStore((state) => state.setVolume);
   const { currentTime, duration, seek, restartOrPrevious } = usePlayerAudio();
+  const [lyricsOpen, setLyricsOpen] = useState(false);
 
   if (!track) return null;
 
@@ -125,7 +129,15 @@ export function PlayerBar() {
           </div>
         </div>
 
-        <div className="flex w-40 items-center justify-end gap-2 text-zinc-400">
+        <div className="flex w-48 items-center justify-end gap-2 text-zinc-400">
+          <button
+            type="button"
+            onClick={() => setLyricsOpen(true)}
+            className="rounded-full p-2 transition-colors hover:text-zinc-100"
+            aria-label="Show lyrics"
+          >
+            <MicVocal className="h-4 w-4" />
+          </button>
           <Volume2 className="h-4 w-4" />
           <input
             type="range"
@@ -139,6 +151,7 @@ export function PlayerBar() {
           />
         </div>
       </div>
+      {lyricsOpen && <LyricsDialog track={track} onClose={() => setLyricsOpen(false)} />}
     </footer>
   );
 }

@@ -9,6 +9,7 @@ from app.schemas.playlist import (
     PlaylistDetail,
     PlaylistItemCreate,
     PlaylistItemRead,
+    PlaylistOrderUpdate,
     PlaylistRead,
     PlaylistUpdate,
 )
@@ -77,6 +78,18 @@ def add_track(
     if track is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
     return user_library.add_playlist_item(db, playlist, track)
+
+
+@router.put("/{playlist_id}/order", status_code=status.HTTP_204_NO_CONTENT)
+def reorder_playlist(
+    playlist_id: int, payload: PlaylistOrderUpdate, db: DbDep, user: CurrentUserDep
+) -> None:
+    playlist = _get_playlist_or_404(db, user, playlist_id)
+    if not user_library.reorder_playlist(db, playlist, payload.item_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Item ids must match the playlist contents exactly",
+        )
 
 
 @router.delete("/{playlist_id}/tracks/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

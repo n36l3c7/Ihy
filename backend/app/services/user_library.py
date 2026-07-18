@@ -129,6 +129,19 @@ def add_playlist_item(db: Session, playlist: Playlist, track: Track) -> Playlist
     return item
 
 
+def reorder_playlist(db: Session, playlist: Playlist, item_ids: list[int]) -> bool:
+    """Rewrite item positions to match the given order. The id list must
+    contain exactly the playlist's items, otherwise nothing changes."""
+    current_ids = [item.id for item in playlist.items]
+    if sorted(item_ids) != sorted(current_ids) or len(item_ids) != len(current_ids):
+        return False
+    position_by_id = {item_id: position for position, item_id in enumerate(item_ids, start=1)}
+    for item in playlist.items:
+        item.position = position_by_id[item.id]
+    db.commit()
+    return True
+
+
 def remove_playlist_item(db: Session, playlist: Playlist, item_id: int) -> bool:
     item = db.scalar(
         select(PlaylistItem).where(

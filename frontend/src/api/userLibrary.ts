@@ -45,6 +45,22 @@ export const addTrackToPlaylist = (playlistId: number, trackId: number) =>
 export const removePlaylistItem = (playlistId: number, itemId: number) =>
   api<void>(`/playlists/${playlistId}/tracks/${itemId}`, { method: "DELETE" });
 
+export const updatePlaylistOrder = (playlistId: number, itemIds: number[]) =>
+  api<void>(`/playlists/${playlistId}/order`, {
+    method: "PUT",
+    body: JSON.stringify({ item_ids: itemIds }),
+  });
+
+export interface TrackLyrics {
+  content: string | null;
+  synced_content: string | null;
+  source: string | null;
+  fetched_at: string;
+}
+
+export const getLyrics = (trackId: number, refresh = false) =>
+  api<TrackLyrics>(`/tracks/${trackId}/lyrics${refresh ? "?refresh=true" : ""}`);
+
 // --- Play history ---
 
 export const recordPlay = (trackId: number) =>

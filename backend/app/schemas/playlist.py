@@ -41,3 +41,9 @@ class PlaylistDetail(PlaylistRead):
 
 class PlaylistItemCreate(BaseModel):
     track_id: int
+
+
+class PlaylistOrderUpdate(BaseModel):
+    """The complete list of item ids in the desired order."""
+
+    item_ids: list[int] = Field(min_length=1)

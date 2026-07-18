@@ -14,6 +14,7 @@ from app.models.library import (
     track_artists,
     track_genres,
 )
+from app.models.lyrics import Lyrics
 from app.models.playlist import Playlist, PlaylistItem
 from app.models.user import User, UserRole
 
@@ -25,6 +26,7 @@ __all__ = [
     "DownloadWatch",
     "Favorite",
     "Genre",
+    "Lyrics",
     "PlayHistory",
     "Playlist",
     "PlaylistItem",

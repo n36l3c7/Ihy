@@ -155,6 +155,54 @@ def test_playlist_add_unknown_track_404(
     assert response.status_code == 404
 
 
+def test_playlist_reorder(
+    client: TestClient, user_headers: dict[str, str], seeded_library: SimpleNamespace
+) -> None:
+    playlist_id = client.post(
+        PLAYLISTS_URL, json={"name": "Ordered"}, headers=user_headers
+    ).json()["id"]
+    for track in seeded_library.tracks:
+        client.post(
+            f"{PLAYLISTS_URL}/{playlist_id}/tracks",
+            json={"track_id": track.id},
+            headers=user_headers,
+        )
+    detail = client.get(f"{PLAYLISTS_URL}/{playlist_id}", headers=user_headers).json()
+    item_ids = [item["id"] for item in detail["items"]]
+
+    reversed_ids = list(reversed(item_ids))
+    response = client.put(
+        f"{PLAYLISTS_URL}/{playlist_id}/order",
+        json={"item_ids": reversed_ids},
+        headers=user_headers,
+    )
+    assert response.status_code == 204
+
+    detail = client.get(f"{PLAYLISTS_URL}/{playlist_id}", headers=user_headers).json()
+    assert [item["id"] for item in detail["items"]] == reversed_ids
+    assert [item["position"] for item in detail["items"]] == [1, 2, 3]
+
+
+def test_playlist_reorder_with_wrong_ids(
+    client: TestClient, user_headers: dict[str, str], seeded_library: SimpleNamespace
+) -> None:
+    playlist_id = client.post(
+        PLAYLISTS_URL, json={"name": "Strict"}, headers=user_headers
+    ).json()["id"]
+    client.post(
+        f"{PLAYLISTS_URL}/{playlist_id}/tracks",
+        json={"track_id": seeded_library.tracks[0].id},
+        headers=user_headers,
+    )
+
+    response = client.put(
+        f"{PLAYLISTS_URL}/{playlist_id}/order",
+        json={"item_ids": [999]},
+        headers=user_headers,
+    )
+    assert response.status_code == 400
+
+
 # --- Play history ---
 
 
