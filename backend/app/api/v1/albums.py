@@ -1,13 +1,14 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 
-from app.api.deps import CurrentUserDep, DbDep, MediaUserDep
+from app.api.deps import AdminUserDep, CurrentUserDep, DbDep, MediaUserDep
 from app.models.library import Album
 from app.schemas.common import Page
 from app.schemas.library import AlbumDetail, AlbumRead
-from app.services import catalog, covers
+from app.services import catalog, covers, tag_editor
+from app.services.tag_editor import InvalidImageError
 
 router = APIRouter()
 
@@ -44,6 +45,21 @@ def read_album(album_id: int, db: DbDep, _user: CurrentUserDep) -> AlbumDetail:
     detail = AlbumDetail.model_validate(album)
     detail.track_count = len(album.tracks)
     return detail
+
+
+@router.put("/{album_id}/cover", status_code=status.HTTP_204_NO_CONTENT)
+def upload_album_cover(
+    album_id: int, file: UploadFile, db: DbDep, _admin: AdminUserDep
+) -> None:
+    """Set the album cover from an uploaded JPEG or PNG image."""
+    album = db.get(Album, album_id)
+    if album is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
+    data = file.file.read()
+    try:
+        tag_editor.save_album_cover(db, album, data)
+    except InvalidImageError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
 
 
 @router.get("/{album_id}/cover")

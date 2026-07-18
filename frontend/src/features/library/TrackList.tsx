@@ -1,13 +1,15 @@
-import { Play, Volume2 } from "lucide-react";
-import type { ReactNode } from "react";
+import { Pencil, Play, Volume2 } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { Link } from "react-router";
 
 import type { Track } from "../../api/types";
 import { CoverImage } from "../../components/CoverImage";
 import { FavoriteButton } from "../../components/FavoriteButton";
 import { artistNames, formatDuration } from "../../lib/format";
+import { useAuthStore } from "../../stores/authStore";
 import { selectCurrentTrack, usePlayerStore } from "../../stores/playerStore";
 import { AddToPlaylistMenu } from "../playlists/AddToPlaylistMenu";
+import { TagEditorDialog } from "../tag-editor/TagEditorDialog";
 
 interface TrackListProps {
   tracks: Track[];
@@ -28,13 +30,19 @@ export function TrackList({
   const currentTrack = usePlayerStore(selectCurrentTrack);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
   const playQueue = usePlayerStore((state) => state.playQueue);
+  const isAdmin = useAuthStore((state) => state.user?.role === "admin");
+  const [editingTrack, setEditingTrack] = useState<Track | null>(null);
 
   if (tracks.length === 0) {
     return <p className="py-12 text-center text-zinc-500">No tracks found.</p>;
   }
 
   return (
-    <ul className="divide-y divide-zinc-800/60">
+    <>
+      {editingTrack && (
+        <TagEditorDialog track={editingTrack} onClose={() => setEditingTrack(null)} />
+      )}
+      <ul className="divide-y divide-zinc-800/60">
       {tracks.map((track, index) => {
         const isCurrent = currentTrack?.id === track.id;
         return (
@@ -94,6 +102,19 @@ export function TrackList({
               <span className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                 <FavoriteButton trackId={track.id} />
                 <AddToPlaylistMenu trackId={track.id} />
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setEditingTrack(track);
+                    }}
+                    className="rounded-full p-1.5 text-zinc-500 transition-colors hover:bg-zinc-700/50 hover:text-zinc-200"
+                    aria-label="Edit tags"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                )}
                 {trailing?.(track, index)}
               </span>
               <span className="shrink-0 text-xs tabular-nums text-zinc-400">
@@ -103,6 +124,7 @@ export function TrackList({
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </>
   );
 }

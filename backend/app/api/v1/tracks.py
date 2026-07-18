@@ -4,11 +4,13 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import FileResponse
 
-from app.api.deps import CurrentUserDep, DbDep, MediaUserDep
+from app.api.deps import AdminUserDep, CurrentUserDep, DbDep, MediaUserDep
 from app.schemas.common import Page
 from app.schemas.library import TrackRead
-from app.services import catalog
+from app.schemas.tags import BatchTagsRequest, BatchTagsResult, TrackTagsUpdate
+from app.services import catalog, tag_editor
 from app.services.catalog import TrackSort
+from app.services.tag_editor import FileMissingError, UnsupportedFormatError
 
 router = APIRouter()
 
@@ -44,6 +46,47 @@ def list_tracks(
         offset=offset,
     )
     return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+
+@router.post("/tags/batch", response_model=BatchTagsResult)
+def batch_edit_tags(payload: BatchTagsRequest, db: DbDep, _admin: AdminUserDep) -> BatchTagsResult:
+    """Apply the same tag changes to many tracks. Errors are reported per file."""
+    changes = payload.changes.model_dump(exclude_unset=True)
+    if not changes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No changes provided"
+        )
+    tracks: list = []
+    errors: list[str] = []
+    for track_id in payload.track_ids:
+        track = catalog.get_track(db, track_id)
+        if track is None:
+            errors.append(f"Track {track_id} not found")
+        else:
+            tracks.append(track)
+    updated, tag_errors = tag_editor.batch_update_tags(db, tracks, changes)
+    return BatchTagsResult(updated=updated, errors=errors + tag_errors)
+
+
+@router.patch("/{track_id}/tags", response_model=TrackRead)
+def edit_track_tags(
+    track_id: int, payload: TrackTagsUpdate, db: DbDep, _admin: AdminUserDep
+):
+    """Write tags to the audio file, then sync the library record from disk."""
+    track = catalog.get_track(db, track_id)
+    if track is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+    changes = payload.model_dump(exclude_unset=True)
+    if not changes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No changes provided"
+        )
+    try:
+        return tag_editor.update_track_tags(db, track, changes)
+    except FileMissingError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from None
+    except UnsupportedFormatError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
 
 
 @router.get("/{track_id}", response_model=TrackRead)
