@@ -1,4 +1,4 @@
-import { DownloadCloud, FolderCog, SlidersHorizontal, Users } from "lucide-react";
+import { DatabaseBackup, DownloadCloud, FolderCog, SlidersHorizontal, Users } from "lucide-react";
 import { Navigate, NavLink, Outlet } from "react-router";
 
 import { useAuthStore } from "../../stores/authStore";
@@ -8,6 +8,7 @@ const SETTINGS_NAV = [
   { to: "/settings/library", label: "Library", icon: SlidersHorizontal },
   { to: "/settings/users", label: "Users", icon: Users },
   { to: "/settings/spotdl", label: "SpotDL", icon: DownloadCloud },
+  { to: "/settings/backup", label: "Backup", icon: DatabaseBackup },
 ];
 
 export function SettingsLayout() {

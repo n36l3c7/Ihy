@@ -16,6 +16,7 @@ from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models.downloads import DownloadFix, DownloadWatch
 from app.services import app_settings
+from app.services import spotify as spotify_service
 from app.services.scan_manager import scan_manager
 
 logger = logging.getLogger(__name__)
@@ -130,10 +131,11 @@ def _utcnow() -> datetime:
 
 
 _SPOTIFY_TRACK_RE = re.compile(r"https://open\.spotify\.com/track/[A-Za-z0-9]+")
+# (pattern, requires a Spotify URL on the line to be identifiable)
 _FAILURE_RES = [
-    re.compile(r"No results found for song:\s*(?P<song>.+)"),
-    re.compile(r"Failed to download[:\s]+(?P<song>.+)"),
-    re.compile(r"(?:LookupError|AudioProviderError|DownloaderError)[:\s-]+(?P<song>.+)"),
+    (re.compile(r"No results found for song:\s*(?P<song>.+)"), False),
+    (re.compile(r"Failed to download[:\s]+(?P<song>.+)"), False),
+    (re.compile(r"(?:LookupError|AudioProviderError|DownloaderError)[:\s-]+(?P<song>.+)"), True),
 ]
 
 
@@ -143,9 +145,11 @@ def parse_failures(lines: list[str]) -> list[dict]:
     for line in lines:
         url_match = _SPOTIFY_TRACK_RE.search(line)
         song: str | None = None
-        for pattern in _FAILURE_RES:
+        for pattern, requires_url in _FAILURE_RES:
             match = pattern.search(line)
             if match:
+                if requires_url and url_match is None:
+                    break  # generic error text with no way to identify the track
                 song = match.group("song").strip()
                 break
         if song is None and url_match and ("rror" in line or "Failed" in line):
@@ -259,12 +263,27 @@ class DownloadManager:
 
     def _record_failures(self, db: Session, watch: DownloadWatch, lines: list[str]) -> None:
         """Persist newly seen failed songs so the admin can pair them with
-        a YouTube URL later."""
+        a YouTube URL later. Song names are resolved to "Artist - Title"
+        from the public Spotify page when the parser only found a URL."""
+        junk = re.compile(r"(?i)^(yt-dlp|audioprovider|downloader|lookup|download error)")
+        resolved = 0
         for failure in parse_failures(lines):
+            song = failure["song"]
+            url = failure["spotify_url"]
+            if url is None and junk.match(song):
+                continue  # error text with no way to identify the track
+            needs_label = url is not None and (url in song or junk.match(song))
+            if needs_label and resolved < 10:
+                resolved += 1
+                label = spotify_service.resolve_track_label(url)
+                if label:
+                    song = label
+            failure["song"] = song[:500]
+            key_filter = (
+                DownloadFix.spotify_url == url if url else DownloadFix.song == failure["song"]
+            )
             exists = db.scalar(
-                select(DownloadFix).where(
-                    DownloadFix.watch_id == watch.id, DownloadFix.song == failure["song"]
-                )
+                select(DownloadFix).where(DownloadFix.watch_id == watch.id, key_filter)
             )
             if exists is None:
                 db.add(DownloadFix(watch_id=watch.id, **failure))

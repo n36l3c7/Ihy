@@ -1,12 +1,14 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 
-from app.api.deps import AdminUserDep, CurrentUserDep, DbDep
+from app.api.deps import AdminUserDep, CurrentUserDep, DbDep, MediaUserDep
 from app.models.library import Album, Artist
 from app.schemas.common import Page
 from app.schemas.library import AlbumRead, ArtistDetail, ArtistRead, LibraryDeleteResult
-from app.services import catalog, library_editor
+from app.services import artist_images, catalog, library_editor
+from app.services.tag_editor import InvalidImageError
 
 router = APIRouter()
 
@@ -39,6 +41,32 @@ def list_artists(
         "limit": limit,
         "offset": offset,
     }
+
+
+@router.get("/{artist_id}/image")
+def artist_image(artist_id: int, db: DbDep, _user: MediaUserDep) -> FileResponse:
+    """Artist picture: manual upload first, otherwise fetched once from Deezer."""
+    artist = catalog.get_artist(db, artist_id)
+    if artist is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artist not found")
+    image = artist_images.resolve_artist_image(artist)
+    if image is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No image available")
+    media_type = "image/png" if image.suffix.lower() == ".png" else "image/jpeg"
+    return FileResponse(image, media_type=media_type)
+
+
+@router.put("/{artist_id}/image", status_code=status.HTTP_204_NO_CONTENT)
+def upload_artist_image(
+    artist_id: int, file: UploadFile, db: DbDep, _admin: AdminUserDep
+) -> None:
+    artist = catalog.get_artist(db, artist_id)
+    if artist is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artist not found")
+    try:
+        artist_images.save_artist_image(artist, file.file.read())
+    except InvalidImageError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
 
 
 @router.delete("/{artist_id}", response_model=LibraryDeleteResult)

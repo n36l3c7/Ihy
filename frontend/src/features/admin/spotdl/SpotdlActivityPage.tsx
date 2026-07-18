@@ -17,6 +17,24 @@ import {
 import { ApiError } from "../../../api/http";
 import { buttonClass, inputClass } from "../../auth/LoginPage";
 
+function adviceFor(error: string | null): string {
+  const text = (error ?? "").toLowerCase();
+  if (text.includes("no results")) {
+    return "spotdl found no YouTube match — paste the exact YouTube URL of this track.";
+  }
+  if (text.includes("deno")) {
+    return "Deno runtime missing — rebuild the Docker image (it now bundles Deno).";
+  }
+  if (text.includes("yt-dlp")) {
+    return "YouTube rejected the download (restriction or throttling). Rebuild the image to update yt-dlp, or paste a working YouTube URL.";
+  }
+  if (text.includes("timed out")) {
+    return "The download timed out — retry with Check now, or paste a YouTube URL.";
+  }
+  return "Paste the matching YouTube URL to force this download on the next check.";
+}
+
+
 function FixRow({ fix }: { fix: DownloadFix }) {
   const queryClient = useQueryClient();
   const [spotifyUrl, setSpotifyUrl] = useState(fix.spotify_url ?? "");
@@ -57,10 +75,8 @@ function FixRow({ fix }: { fix: DownloadFix }) {
           {ready ? "fix active" : "needs URL"}
         </span>
       </div>
-      {fix.error && (
-        <p className="mb-2 truncate text-xs text-zinc-500" title={fix.error}>
-          {fix.error}
-        </p>
+      {!ready && (
+        <p className="mb-2 text-xs text-amber-400/80">{adviceFor(fix.error)}</p>
       )}
       <div className="flex flex-wrap items-center gap-2">
         <input

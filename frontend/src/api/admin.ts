@@ -43,6 +43,19 @@ export const updateUser = (id: number, changes: UserUpdatePayload) =>
 
 export const deleteUser = (id: number) => api<void>(`/users/${id}`, { method: "DELETE" });
 
+export interface BackupImportSummary {
+  sections: Record<string, { created: number; updated: number; skipped: number }>;
+}
+
+export const exportBackup = (sections: string[]) =>
+  api<Record<string, unknown>>(`/settings/backup?sections=${sections.join(",")}`);
+
+export const importBackup = (sections: string[], data: unknown) =>
+  api<BackupImportSummary>("/settings/backup", {
+    method: "POST",
+    body: JSON.stringify({ sections, data }),
+  });
+
 export const getLibrarySettings = () => api<LibrarySettings>("/settings/library");
 
 export const updateLibrarySettings = (settings: LibrarySettings) =>

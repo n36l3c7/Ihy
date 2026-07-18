@@ -71,3 +71,9 @@ export async function uploadAlbumCover(albumId: number, file: File): Promise<voi
   form.append("file", file);
   await api<void>(`/albums/${albumId}/cover`, { method: "PUT", body: form });
 }
+
+export async function uploadArtistImage(artistId: number, file: File): Promise<void> {
+  const form = new FormData();
+  form.append("file", file);
+  await api<void>(`/artists/${artistId}/image`, { method: "PUT", body: form });
+}

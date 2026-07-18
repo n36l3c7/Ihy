@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models.library import Album, Artist, Genre, Source, Track, track_artists, track_genres
 from app.services import app_settings
+from app.services.artist_images import invalidate_artist_image_cache
 from app.services.covers import invalidate_album_cover_cache
 from app.services.tag_reader import SUPPORTED_EXTENSIONS, AudioFileInfo, read_audio_file
 
@@ -49,6 +50,8 @@ class _EntityCache:
                 found = Artist(name=key)
                 self.db.add(found)
                 self.db.flush()
+                # New artist may reuse the id of a deleted one
+                invalidate_artist_image_cache(found.id)
             self.artists[key] = found
         return self.artists[key]
 
@@ -260,6 +263,16 @@ def _prune_orphans(db: Session) -> None:
     for album_id in orphan_album_ids:
         invalidate_album_cover_cache(album_id)
     db.execute(delete(Album).where(~exists().where(Track.album_id == Album.id)))
+    orphan_artist_ids = list(
+        db.scalars(
+            select(Artist.id).where(
+                ~exists().where(track_artists.c.artist_id == Artist.id),
+                ~exists().where(Album.artist_id == Artist.id),
+            )
+        )
+    )
+    for artist_id in orphan_artist_ids:
+        invalidate_artist_image_cache(artist_id)
     db.execute(
         delete(Artist).where(
             ~exists().where(track_artists.c.artist_id == Artist.id),

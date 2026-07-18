@@ -1,9 +1,12 @@
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import AdminUserDep, DbDep
+from app.schemas.backup import BackupImportRequest, BackupImportResult
 from app.schemas.downloads import DownloadSettings, SpotdlOptions
 from app.schemas.settings import LibrarySettings
-from app.services import app_settings
+from app.services import app_settings, backup
 from app.workers.scheduler import reschedule_download_job
 
 router = APIRouter()
@@ -48,3 +51,39 @@ def update_spotdl_options(
 ) -> SpotdlOptions:
     app_settings.set_spotdl_options(db, payload.model_dump())
     return SpotdlOptions(**app_settings.get_spotdl_options(db))
+
+
+@router.get("/backup")
+def export_backup(
+    db: DbDep,
+    _admin: AdminUserDep,
+    sections: Annotated[str, Query(description="Comma separated section names")],
+) -> dict:
+    """Export selected configuration sections as a JSON document."""
+    requested = [section.strip() for section in sections.split(",") if section.strip()]
+    invalid = [section for section in requested if section not in backup.SECTIONS]
+    if not requested or invalid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Valid sections: {', '.join(backup.SECTIONS)}",
+        )
+    return backup.export_backup(db, requested)
+
+
+@router.post("/backup", response_model=BackupImportResult)
+def import_backup(
+    payload: BackupImportRequest, db: DbDep, _admin: AdminUserDep
+) -> BackupImportResult:
+    """Merge a previously exported backup. Matching is done on natural keys
+    (path, username, name); nothing is deleted."""
+    if payload.data.get("app") != "ihy":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Not an Ihy backup file"
+        )
+    invalid = [section for section in payload.sections if section not in backup.SECTIONS]
+    if invalid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown sections: {', '.join(invalid)}",
+        )
+    return BackupImportResult(sections=backup.import_backup(db, payload.data, payload.sections))

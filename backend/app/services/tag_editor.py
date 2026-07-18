@@ -1,20 +1,24 @@
-import io
 import logging
 from pathlib import Path
 from typing import Any
 
 import mutagen
-from PIL import Image
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.library import Album, Track
 from app.services import app_settings, tag_reader
+from app.services.images import InvalidImageError, validated_suffix
 from app.services.scanner import _apply_info, _EntityCache, _prune_orphans
 
 logger = logging.getLogger(__name__)
 
-COVER_MAX_BYTES = 10 * 1024 * 1024
+__all__ = [
+    "FileMissingError",
+    "InvalidImageError",
+    "TagEditError",
+    "UnsupportedFormatError",
+]
 
 
 class TagEditError(Exception):
@@ -29,10 +33,6 @@ class FileMissingError(TagEditError):
 class UnsupportedFormatError(TagEditError):
     def __init__(self, path: str):
         super().__init__(f"Unsupported or unreadable audio format: {path}")
-
-
-class InvalidImageError(TagEditError):
-    pass
 
 
 def _register_easyid3_extras() -> None:
@@ -208,21 +208,10 @@ def save_album_cover(
     db: Session, album: Album, data: bytes, covers_dir: Path | None = None
 ) -> Path:
     """Validate and store an uploaded album cover, replacing any cached one."""
-    if len(data) > COVER_MAX_BYTES:
-        raise InvalidImageError("Image is too large (max 10 MB)")
-    try:
-        image = Image.open(io.BytesIO(data))
-        image_format = image.format
-        image.verify()
-    except Exception as exc:
-        raise InvalidImageError("Not a valid image file") from exc
-    if image_format not in ("JPEG", "PNG"):
-        raise InvalidImageError("Only JPEG and PNG covers are supported")
-
+    suffix = validated_suffix(data)
     if covers_dir is None:
         covers_dir = get_settings().data_dir / "covers"
     covers_dir.mkdir(parents=True, exist_ok=True)
-    suffix = ".png" if image_format == "PNG" else ".jpg"
     for other_suffix in (".jpg", ".png"):
         if other_suffix != suffix:
             stale = covers_dir / f"album_{album.id}{other_suffix}"

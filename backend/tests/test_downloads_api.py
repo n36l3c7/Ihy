@@ -168,6 +168,37 @@ def test_manager_runs_enabled_watches_and_triggers_scan(tmp_path: Path) -> None:
     engine.dispose()
 
 
+def test_failure_with_url_gets_human_label(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    engine, session_factory, _music, watch_id, _other = _make_manager_env(tmp_path)
+    monkeypatch.setattr(
+        "app.services.spotify.resolve_track_label", lambda url: "Halsey - Without Me"
+    )
+
+    def fake_runner(query, _dir, _options, on_line):
+        if query == "solo-query":
+            on_line(
+                "https://open.spotify.com/track/abc123 - AudioProviderError: "
+                "YT-DLP download error -"
+            )
+            on_line("DownloaderError: something went wrong")  # no URL -> skipped
+        return True, "done"
+
+    manager = DownloadManager(
+        session_factory=session_factory, runner=fake_runner, start_scan=lambda: True
+    )
+    assert manager.start(watch_ids=[watch_id]) is True
+    _wait_for(manager)
+
+    with session_factory() as db:
+        fixes = list(db.scalars(select(DownloadFix)))
+        assert len(fixes) == 1
+        assert fixes[0].song == "Halsey - Without Me"
+        assert fixes[0].spotify_url == "https://open.spotify.com/track/abc123"
+    engine.dispose()
+
+
 def test_download_settings_roundtrip(
     client: TestClient, admin_headers: dict[str, str]
 ) -> None:

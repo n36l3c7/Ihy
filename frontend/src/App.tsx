@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 
 import { Layout } from "./components/Layout";
+import { BackupPage } from "./features/admin/BackupPage";
 import { LibrarySettingsPage } from "./features/admin/LibrarySettingsPage";
 import { SettingsLayout } from "./features/admin/SettingsLayout";
 import { SourcesPage } from "./features/admin/SourcesPage";
@@ -69,6 +70,7 @@ const router = createBrowserRouter([
                   { path: "activity", element: <SpotdlActivityPage /> },
                 ],
               },
+              { path: "backup", element: <BackupPage /> },
             ],
           },
           { path: "*", element: <Navigate to="/tracks" replace /> },

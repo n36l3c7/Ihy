@@ -11,6 +11,7 @@ TOKEN_URL = "https://accounts.spotify.com/api/token"
 SEARCH_URL = "https://api.spotify.com/v1/search"
 
 _OG_TITLE_RE = re.compile(r'<meta property="og:title" content="([^"]+)"')
+_OG_DESC_RE = re.compile(r'<meta property="og:description" content="([^"]+)"')
 
 _token_cache: dict = {"client_id": None, "token": None, "expires_at": 0.0}
 
@@ -45,9 +46,7 @@ def _get_token(client_id: str, client_secret: str) -> str:
     return _token_cache["token"]
 
 
-def resolve_title(url: str) -> str | None:
-    """Extract the artist/album name from a public open.spotify.com page.
-    Works without API credentials — used as the no-credentials fallback."""
+def _fetch_page(url: str) -> str | None:
     try:
         response = httpx.get(
             url,
@@ -58,10 +57,36 @@ def resolve_title(url: str) -> str | None:
     except httpx.HTTPError as exc:
         logger.warning("Spotify page fetch failed: %s", exc)
         return None
-    if response.status_code != 200:
+    return response.text if response.status_code == 200 else None
+
+
+def resolve_title(url: str) -> str | None:
+    """Extract the artist/album name from a public open.spotify.com page.
+    Works without API credentials — used as the no-credentials fallback."""
+    page = _fetch_page(url)
+    if page is None:
         return None
-    match = _OG_TITLE_RE.search(response.text)
+    match = _OG_TITLE_RE.search(page)
     return html.unescape(match.group(1)) if match else None
+
+
+def resolve_track_label(url: str) -> str | None:
+    """Build a human-readable "Artist - Title" label for a Spotify track URL,
+    from the public page metadata (no credentials needed)."""
+    page = _fetch_page(url)
+    if page is None:
+        return None
+    title_match = _OG_TITLE_RE.search(page)
+    if title_match is None:
+        return None
+    title = html.unescape(title_match.group(1))
+    desc_match = _OG_DESC_RE.search(page)
+    if desc_match:
+        # og:description looks like "Artist · Song · 2020"
+        artist = html.unescape(desc_match.group(1)).split("·")[0].strip()
+        if artist and artist.lower() != title.lower():
+            return f"{artist} - {title}"
+    return title
 
 
 def search_artists(
