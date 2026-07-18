@@ -18,19 +18,28 @@ import {
   Settings,
   Tags,
   Trash2,
+  Upload,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 
 import type { Playlist } from "../api/types";
-import { createPlaylist, deletePlaylist, getPlaylist, getPlaylists } from "../api/userLibrary";
+import {
+  createPlaylist,
+  deletePlaylist,
+  getPlaylist,
+  getPlaylists,
+  importPlaylistFile,
+} from "../api/userLibrary";
 import { PlayerBar } from "../features/player/PlayerBar";
 import { QueuePanel } from "../features/player/QueuePanel";
+import { seekRelative } from "../lib/playerControls";
 import { initPlayerSync } from "../lib/playerSync";
 import { initSessionPersistence, restoreSession } from "../lib/session";
 import { applyTheme, currentTheme, THEMES } from "../lib/theme";
 import { useAuthStore } from "../stores/authStore";
 import { usePlayerStore } from "../stores/playerStore";
+import { CommandPalette } from "./CommandPalette";
 import { ContextMenu, contextMenuItemClass } from "./ContextMenu";
 
 const LIBRARY_ITEMS = [
@@ -66,6 +75,8 @@ export function Layout() {
   const [menu, setMenu] = useState<{ x: number; y: number; playlist: Playlist } | null>(null);
   const [themeOpen, setThemeOpen] = useState(false);
   const [theme, setTheme] = useState(currentTheme);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const playlists = useQuery({ queryKey: ["playlists"], queryFn: getPlaylists });
 
@@ -77,6 +88,65 @@ export function Layout() {
     const timer = setTimeout(() => void restoreSession(), 800);
     return () => clearTimeout(timer);
   }, []);
+
+  // Global shortcuts: Ctrl+K palette, Space play/pause, arrows seek/volume
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+        return;
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+      const store = usePlayerStore.getState();
+      switch (event.key) {
+        case " ":
+          event.preventDefault();
+          store.togglePlay();
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          seekRelative(5);
+          break;
+        case "ArrowLeft":
+          event.preventDefault();
+          seekRelative(-5);
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          store.setVolume(Math.min(1, store.volume + 0.05));
+          break;
+        case "ArrowDown":
+          event.preventDefault();
+          store.setVolume(Math.max(0, store.volume - 0.05));
+          break;
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const handleImportFile = async (file: File) => {
+    try {
+      const result = await importPlaylistFile(file);
+      void queryClient.invalidateQueries({ queryKey: ["playlists"] });
+      navigate(`/playlists/${result.playlist.id}`);
+      if (result.matched < result.total) {
+        window.alert(`Imported "${result.playlist.name}": ${result.matched}/${result.total} tracks matched.`);
+      }
+    } catch {
+      window.alert("Could not import the playlist file.");
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: () => createPlaylist("New playlist"),
@@ -126,15 +196,37 @@ export function Layout() {
               <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Playlists
               </p>
-              <button
-                type="button"
-                onClick={() => createMutation.mutate()}
-                disabled={createMutation.isPending}
-                className="rounded-full p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
-                aria-label="Create playlist"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => importInputRef.current?.click()}
+                  className="rounded-full p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                  aria-label="Import playlist"
+                  title="Import M3U/XSPF playlist"
+                >
+                  <Upload className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => createMutation.mutate()}
+                  disabled={createMutation.isPending}
+                  className="rounded-full p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                  aria-label="Create playlist"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".m3u,.m3u8,.xspf"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) void handleImportFile(file);
+                }}
+              />
             </div>
             {playlists.data?.map((playlist) => (
               <NavLink
@@ -208,6 +300,7 @@ export function Layout() {
         {queueOpen && <QueuePanel />}
       </div>
       <PlayerBar />
+      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)}>
           <button

@@ -1,14 +1,25 @@
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, ConfigDict
 
 from app.api.deps import AdminUserDep, CurrentUserDep, DbDep, MediaUserDep
 from app.models.library import Album, Artist
 from app.schemas.common import Page
 from app.schemas.library import AlbumRead, ArtistDetail, ArtistRead, LibraryDeleteResult
-from app.services import artist_images, catalog, library_editor
+from app.services import artist_images, artist_info, catalog, library_editor
 from app.services.tag_editor import InvalidImageError
+
+
+class ArtistInfoRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    bio: str | None
+    url: str | None
+    source: str | None
+    fetched_at: datetime
 
 router = APIRouter()
 
@@ -41,6 +52,17 @@ def list_artists(
         "limit": limit,
         "offset": offset,
     }
+
+
+@router.get("/{artist_id}/info", response_model=ArtistInfoRead)
+def artist_biography(
+    artist_id: int, db: DbDep, _user: CurrentUserDep, refresh: bool = False
+):
+    """Artist biography from Wikipedia, cached in the database."""
+    artist = catalog.get_artist(db, artist_id)
+    if artist is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artist not found")
+    return artist_info.get_or_fetch(db, artist, refresh=refresh)
 
 
 @router.get("/{artist_id}/image")

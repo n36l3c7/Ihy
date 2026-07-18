@@ -1,3 +1,4 @@
+import { useAuthStore } from "../stores/authStore";
 import { qs } from "./catalog";
 import { api } from "./http";
 import type {
@@ -60,6 +61,36 @@ export interface TrackLyrics {
 
 export const getLyrics = (trackId: number, refresh = false) =>
   api<TrackLyrics>(`/tracks/${trackId}/lyrics${refresh ? "?refresh=true" : ""}`);
+
+export interface PlaylistImportResult {
+  playlist: Playlist;
+  matched: number;
+  total: number;
+}
+
+export async function importPlaylistFile(file: File): Promise<PlaylistImportResult> {
+  const form = new FormData();
+  form.append("file", file);
+  return api<PlaylistImportResult>("/playlists/import", { method: "POST", body: form });
+}
+
+/** Download a playlist as an .m3u8 file (raw fetch: the response is plain text). */
+export async function downloadPlaylistExport(id: number, name: string): Promise<void> {
+  const token = useAuthStore.getState().accessToken;
+  const response = await fetch(`/api/v1/playlists/${id}/export`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!response.ok) throw new Error(`Export failed (${response.status})`);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${name || "playlist"}.m3u8`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 // --- Play history ---
 

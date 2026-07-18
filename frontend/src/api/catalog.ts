@@ -28,6 +28,15 @@ export const getArtists = (params: { q?: string; limit?: number; offset?: number
 
 export const getArtist = (id: number) => api<ArtistDetail>(`/artists/${id}`);
 
+export interface ArtistInfoData {
+  bio: string | null;
+  url: string | null;
+  source: string | null;
+  fetched_at: string;
+}
+
+export const getArtistInfo = (id: number) => api<ArtistInfoData>(`/artists/${id}/info`);
+
 export const getAlbums = (params: {
   q?: string;
   artist_id?: number;

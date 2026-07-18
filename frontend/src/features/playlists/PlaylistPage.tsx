@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ListMusic, Play, Trash2, X } from "lucide-react";
+import { Download, ListMusic, Play, Trash2, X } from "lucide-react";
 import { type MouseEvent, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
 import {
   deletePlaylist,
+  downloadPlaylistExport,
   getPlaylist,
   removePlaylistItem,
   renamePlaylist,
@@ -112,6 +113,16 @@ export function PlaylistPage() {
           >
             <Play className="h-4 w-4" />
             Play
+          </button>
+          <button
+            type="button"
+            onClick={() => void downloadPlaylistExport(id, playlist.name)}
+            disabled={tracks.length === 0}
+            className="rounded-full p-2.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-40"
+            aria-label="Export playlist"
+            title="Export as M3U"
+          >
+            <Download className="h-5 w-5" />
           </button>
           <button
             type="button"

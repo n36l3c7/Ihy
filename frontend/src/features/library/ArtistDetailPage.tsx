@@ -3,7 +3,7 @@ import { ImagePlus, Play, Trash2 } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 
-import { deleteArtist, getAlbum, getArtist, getTracks } from "../../api/catalog";
+import { deleteArtist, getAlbum, getArtist, getArtistInfo, getTracks } from "../../api/catalog";
 import { uploadArtistImage } from "../../api/tags";
 import { ArtistImage } from "../../components/ArtistImage";
 import { CardPlayButton } from "../../components/CardPlayButton";
@@ -27,6 +27,7 @@ export function ArtistDetailPage() {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [imageVersion, setImageVersion] = useState(0);
+  const [bioExpanded, setBioExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const deleteMutation = useMutation({
@@ -52,6 +53,12 @@ export function ArtistDetailPage() {
     queryFn: () =>
       getTracks({ artist_id: Number(artistId), limit: pageSize, offset: page * pageSize }),
     placeholderData: keepPreviousData,
+  });
+
+  const infoQuery = useQuery({
+    queryKey: ["artist-info", artistId],
+    queryFn: () => getArtistInfo(Number(artistId)),
+    staleTime: 24 * 60 * 60 * 1000,
   });
 
   const handlePlayAll = async () => {
@@ -228,6 +235,38 @@ export function ArtistDetailPage() {
             </Link>
           ))}
         </div>
+      )}
+
+      {infoQuery.data?.bio && (
+        <section className="mb-10 mt-10 max-w-3xl">
+          <h2 className="mb-3 text-lg font-semibold">About</h2>
+          <p
+            className={`whitespace-pre-line text-sm leading-relaxed text-zinc-400 ${
+              bioExpanded ? "" : "line-clamp-4"
+            }`}
+          >
+            {infoQuery.data.bio}
+          </p>
+          <div className="mt-2 flex items-center gap-4 text-xs">
+            <button
+              type="button"
+              onClick={() => setBioExpanded((expanded) => !expanded)}
+              className="font-semibold text-zinc-300 transition-colors hover:text-zinc-100"
+            >
+              {bioExpanded ? "Show less" : "Show more"}
+            </button>
+            {infoQuery.data.url && (
+              <a
+                href={infoQuery.data.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-zinc-500 transition-colors hover:text-zinc-300"
+              >
+                Read on Wikipedia
+              </a>
+            )}
+          </div>
+        </section>
       )}
     </div>
   );

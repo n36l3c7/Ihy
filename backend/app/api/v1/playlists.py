@@ -1,4 +1,8 @@
-from fastapi import APIRouter, HTTPException, status
+from pathlib import Path
+
+from fastapi import APIRouter, Form, HTTPException, UploadFile, status
+from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUserDep, DbDep
@@ -13,7 +17,7 @@ from app.schemas.playlist import (
     PlaylistRead,
     PlaylistUpdate,
 )
-from app.services import catalog, user_library
+from app.services import catalog, playlist_files, user_library
 
 router = APIRouter()
 
@@ -42,6 +46,51 @@ def create_playlist(payload: PlaylistCreate, db: DbDep, user: CurrentUserDep) ->
         db, user, name=payload.name, description=payload.description
     )
     return _to_read(playlist, 0)
+
+
+class PlaylistImportResult(BaseModel):
+    playlist: PlaylistRead
+    matched: int
+    total: int
+
+
+@router.post(
+    "/import", response_model=PlaylistImportResult, status_code=status.HTTP_201_CREATED
+)
+def import_playlist(
+    file: UploadFile,
+    db: DbDep,
+    user: CurrentUserDep,
+    name: str | None = Form(default=None),
+) -> PlaylistImportResult:
+    """Create a playlist from an uploaded M3U/M3U8/XSPF file.
+    Entries are matched to library tracks by path, then by file name."""
+    try:
+        content = file.file.read().decode("utf-8-sig", errors="replace")
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Unreadable file"
+        ) from None
+    playlist_name = (name or Path(file.filename or "Imported playlist").stem).strip()[:100]
+    playlist, matched, total = playlist_files.import_playlist(
+        db, user, name=playlist_name or "Imported playlist", content=content
+    )
+    read = PlaylistRead.model_validate(playlist)
+    read.track_count = matched
+    return PlaylistImportResult(playlist=read, matched=matched, total=total)
+
+
+@router.get("/{playlist_id}/export")
+def export_playlist(playlist_id: int, db: DbDep, user: CurrentUserDep) -> PlainTextResponse:
+    """Download the playlist as extended M3U."""
+    playlist = _get_playlist_or_404(db, user, playlist_id)
+    return PlainTextResponse(
+        playlist_files.export_m3u(playlist),
+        media_type="audio/x-mpegurl",
+        headers={
+            "Content-Disposition": f'attachment; filename="{playlist.name}.m3u8"'
+        },
+    )
 
 
 @router.get("/{playlist_id}", response_model=PlaylistDetail)
