@@ -16,6 +16,8 @@ import type { Track } from "../../api/types";
 import { getLyrics } from "../../api/userLibrary";
 import { CoverImage } from "../../components/CoverImage";
 import { FavoriteButton } from "../../components/FavoriteButton";
+import { Visualizer } from "../../components/Visualizer";
+import { WaveformSeekbar } from "../../components/WaveformSeekbar";
 import { useImageColor } from "../../hooks/useImageColor";
 import { formatDuration } from "../../lib/format";
 import { activeLrcIndex, parseLrc } from "../../lib/lrc";
@@ -149,18 +151,18 @@ export function NowPlayingView({
       </div>
 
       <div className="mx-auto w-full max-w-2xl px-4 pb-8 sm:px-8 sm:pb-10">
+        <Visualizer className="mb-2 h-14 w-full opacity-60" />
         <div className="flex items-center gap-2 text-xs tabular-nums text-zinc-400">
           <span className="w-10 text-right">{formatDuration(currentTime)}</span>
-          <input
-            type="range"
-            min={0}
-            max={duration || 1}
-            step={0.5}
-            value={Math.min(currentTime, duration || 1)}
-            onChange={(event) => seek(Number(event.target.value))}
-            className="h-1 flex-1 cursor-pointer"
-            aria-label="Seek"
-          />
+          <div className="min-w-0 flex-1">
+            <WaveformSeekbar
+              trackId={track.id}
+              currentTime={currentTime}
+              duration={duration}
+              onSeek={seek}
+              height={36}
+            />
+          </div>
           <span className="w-10">{formatDuration(duration)}</span>
         </div>
         <div className="mt-3 flex items-center justify-center gap-3">

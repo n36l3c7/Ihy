@@ -37,6 +37,9 @@ export interface ArtistInfoData {
 
 export const getArtistInfo = (id: number) => api<ArtistInfoData>(`/artists/${id}/info`);
 
+export const getWaveform = (trackId: number) =>
+  api<{ peaks: number[] }>(`/tracks/${trackId}/waveform`);
+
 export const getRadioTracks = (seedTrackId: number, excludeIds: number[]) =>
   api<Track[]>(
     `/tracks/${seedTrackId}/radio${qs({ limit: 20, exclude: excludeIds.slice(0, 500).join(",") })}`,

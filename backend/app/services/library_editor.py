@@ -7,6 +7,7 @@ from app.models.library import Album, Artist, Track
 from app.services.covers import invalidate_album_cover_cache
 from app.services.scanner import _prune_orphans
 from app.services.transcoder import invalidate_track_transcodes
+from app.services.waveforms import invalidate_track_waveform
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ def _delete_tracks(db: Session, tracks: list[Track]) -> tuple[int, list[str]]:
         except OSError as exc:
             errors.append(f"{track.file_path}: {exc}")
         invalidate_track_transcodes(track.id)
+        invalidate_track_waveform(track.id)
         db.delete(track)
     db.commit()
     _prune_orphans(db)

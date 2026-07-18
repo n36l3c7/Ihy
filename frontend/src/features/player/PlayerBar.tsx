@@ -20,6 +20,7 @@ import { Link } from "react-router";
 import { createBookmark } from "../../api/wave3";
 import { CoverImage } from "../../components/CoverImage";
 import { FavoriteButton } from "../../components/FavoriteButton";
+import { WaveformSeekbar } from "../../components/WaveformSeekbar";
 import { castStop, requestCastSession } from "../../lib/cast";
 import { formatDuration } from "../../lib/format";
 import { useCastStore } from "../../stores/castStore";
@@ -286,16 +287,15 @@ export function PlayerBar() {
           </div>
           <div className="flex w-full max-w-xl items-center gap-2 text-xs tabular-nums text-zinc-400">
             <span className="w-10 text-right">{formatDuration(currentTime)}</span>
-            <input
-              type="range"
-              min={0}
-              max={duration || 1}
-              step={0.5}
-              value={Math.min(currentTime, duration || 1)}
-              onChange={(event) => seek(Number(event.target.value))}
-              className="h-1 flex-1 cursor-pointer"
-              aria-label="Seek"
-            />
+            <div className="min-w-0 flex-1">
+              <WaveformSeekbar
+                trackId={track.id}
+                currentTime={currentTime}
+                duration={duration}
+                onSeek={seek}
+                height={26}
+              />
+            </div>
             <span className="w-10">{formatDuration(duration)}</span>
           </div>
         </div>

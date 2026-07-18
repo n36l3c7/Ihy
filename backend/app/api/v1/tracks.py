@@ -3,13 +3,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
 from app.api.deps import AdminUserDep, CurrentUserDep, DbDep, MediaUserDep
 from app.schemas.common import Page
 from app.schemas.library import LibraryDeleteResult, TrackRead
 from app.schemas.lyrics import LyricsRead
 from app.schemas.tags import BatchTagsRequest, BatchTagsResult, TrackFileTags, TrackTagsUpdate
-from app.services import catalog, library_editor, tag_editor, transcoder
+from app.services import catalog, library_editor, tag_editor, transcoder, waveforms
 from app.services import lyrics as lyrics_service
 from app.services.catalog import TrackSort
 from app.services.tag_editor import FileMissingError, UnsupportedFormatError
@@ -58,6 +59,24 @@ def list_tracks(
         offset=offset,
     )
     return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+
+class WaveformRead(BaseModel):
+    peaks: list[float]
+
+
+@router.get("/{track_id}/waveform", response_model=WaveformRead)
+def track_waveform(track_id: int, db: DbDep, _user: CurrentUserDep) -> WaveformRead:
+    """Normalized waveform peaks for the seekbar (cached, needs ffmpeg)."""
+    track = catalog.get_track(db, track_id)
+    if track is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+    peaks = waveforms.get_or_create_waveform(track)
+    if peaks is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Waveform unavailable"
+        )
+    return WaveformRead(peaks=peaks)
 
 
 @router.get("/{track_id}/radio", response_model=list[TrackRead])

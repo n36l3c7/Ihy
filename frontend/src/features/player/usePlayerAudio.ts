@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getRadioTracks } from "../../api/catalog";
 import type { Track } from "../../api/types";
 import { recordPlay } from "../../api/userLibrary";
+import { audioGraph } from "../../lib/audioGraph";
 import { castPlayPause, castSeek, syncCastTrack } from "../../lib/cast";
 import { sendCommand } from "../../lib/syncBus";
 import { useAuthStore } from "../../stores/authStore";
@@ -91,7 +92,13 @@ export function usePlayerAudio() {
       return filter;
     });
     for (let i = 1; i < filters.length; i++) filters[i - 1].connect(filters[i]);
-    filters[filters.length - 1].connect(context.destination);
+    // Tap the chain with an analyser for the visualizer, then to the output
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.82;
+    filters[filters.length - 1].connect(analyser);
+    analyser.connect(context.destination);
+    audioGraph.analyser = analyser;
 
     elements.forEach((element, index) => {
       const source = context.createMediaElementSource(element);
@@ -116,6 +123,7 @@ export function usePlayerAudio() {
       void context.close();
       audioContextRef.current = null;
       gainsRef.current = [null, null];
+      audioGraph.analyser = null;
     };
   }, [elements]);
 
