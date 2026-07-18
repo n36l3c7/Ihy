@@ -102,6 +102,8 @@ export function PlayerBar() {
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [eqOpen, setEqOpen] = useState(false);
   const eqEnabled = useEqStore((state) => state.enabled);
+  const syncRole = usePlayerStore((state) => state.syncRole);
+  const takeOver = usePlayerStore((state) => state.takeOver);
 
   if (!track) return null;
 
@@ -124,6 +126,18 @@ export function PlayerBar() {
 
   return (
     <footer className="border-t border-zinc-800 bg-zinc-900 px-4 py-3">
+      {syncRole === "remote" && (
+        <div className="mb-2 flex items-center justify-center gap-3 rounded-md bg-emerald-600/10 py-1 text-xs text-emerald-400">
+          Playing in another tab — this tab is a remote control
+          <button
+            type="button"
+            onClick={takeOver}
+            className="rounded-full border border-emerald-600/50 px-3 py-0.5 font-medium transition-colors hover:bg-emerald-600/20"
+          >
+            Play here
+          </button>
+        </div>
+      )}
       <div className="flex items-center gap-4">
         <div className="flex w-64 min-w-0 items-center gap-3">
           <CoverImage albumId={track.album?.id} className="h-12 w-12 shrink-0 rounded" />

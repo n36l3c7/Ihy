@@ -28,7 +28,7 @@ export function initSessionPersistence(): void {
     timer = window.setTimeout(() => {
       timer = undefined;
       const state = usePlayerStore.getState();
-      if (state.position < 0) return;
+      if (state.position < 0 || state.syncRole === "remote") return;
       const snapshot: SessionSnapshot = {
         trackIds: selectOrderedTracks(state).map((track) => track.id),
         position: state.position,
@@ -46,7 +46,7 @@ export async function restoreSession(): Promise<void> {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return;
   const store = usePlayerStore.getState();
-  if (store.position >= 0) return; // something is already loaded
+  if (store.position >= 0 || store.syncRole === "remote") return; // active elsewhere
 
   let snapshot: SessionSnapshot;
   try {

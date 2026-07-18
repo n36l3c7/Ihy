@@ -1,8 +1,23 @@
 import { create } from "zustand";
 
 import type { Track } from "../api/types";
+import { sendCommand } from "../lib/syncBus";
 
 export type RepeatMode = "off" | "all" | "one";
+
+/** Spotify Connect-style roles: the leader tab owns the audio element,
+ *  remote tabs mirror its state and send commands. */
+export type SyncRole = "standalone" | "leader" | "remote";
+
+export interface RemoteState {
+  tracks: Track[];
+  position: number;
+  isPlaying: boolean;
+  repeat: RepeatMode;
+  volume: number;
+  playbackRate: number;
+  currentTime: number;
+}
 
 /** Playback order as indices into the queue; the current track stays first. */
 function shuffledOrder(length: number, firstIndex: number | null): number[] {
@@ -29,6 +44,8 @@ interface PlayerState {
   activeSavedQueueId: number | null;
   pendingSeekSeconds: number | null; // applied by the audio hook when the track loads
   lastKnownTime: number; // most recent playback position, for saving queues
+  syncRole: SyncRole;
+  remoteSeekRequest: number | null; // seek requested by a remote tab
   playQueue: (tracks: Track[], startIndex?: number) => void;
   togglePlay: () => void;
   setPlaying: (playing: boolean) => void;
@@ -44,6 +61,9 @@ interface PlayerState {
   setActiveSavedQueueId: (id: number | null) => void;
   setPendingSeekSeconds: (seconds: number | null) => void;
   setLastKnownTime: (seconds: number) => void;
+  setSyncRole: (role: SyncRole) => void;
+  applyRemoteState: (state: RemoteState) => void;
+  takeOver: () => void;
   restoreQueue: (tracks: Track[], startIndex: number) => void;
   jumpTo: (orderIndex: number) => void;
   removeAt: (orderIndex: number) => void;
@@ -57,7 +77,18 @@ export function selectOrderedTracks(state: PlayerState): Track[] {
   return state.order.map((index) => state.queue[index]);
 }
 
-export const usePlayerStore = create<PlayerState>((set, get) => ({
+export const usePlayerStore = create<PlayerState>((set, get) => {
+  /** In remote tabs, actions are forwarded to the leader instead of
+   *  running locally; the leader's state broadcast updates this tab. */
+  const forwarded = (name: string, ...args: unknown[]): boolean => {
+    if (get().syncRole === "remote") {
+      sendCommand(name, ...args);
+      return true;
+    }
+    return false;
+  };
+
+  return {
   queue: [],
   order: [],
   position: -1,
@@ -72,8 +103,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   activeSavedQueueId: null,
   pendingSeekSeconds: null,
   lastKnownTime: 0,
+  syncRole: "standalone",
+  remoteSeekRequest: null,
 
   playQueue: (tracks, startIndex = 0) => {
+    if (forwarded("playQueue", tracks, startIndex)) return;
     if (tracks.length === 0) return;
     const { shuffle } = get();
     const order = shuffle
@@ -83,12 +117,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   togglePlay: () => {
+    if (forwarded("togglePlay")) return;
     if (get().position >= 0) set((state) => ({ isPlaying: !state.isPlaying }));
   },
 
-  setPlaying: (isPlaying) => set({ isPlaying }),
+  setPlaying: (isPlaying) => {
+    if (forwarded("setPlaying", isPlaying)) return;
+    set({ isPlaying });
+  },
 
   next: (fromEnded = false) => {
+    if (forwarded("next")) return;
     const { position, order, repeat } = get();
     if (position < 0) return;
     if (position + 1 < order.length) {
@@ -101,11 +140,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   previous: () => {
+    if (forwarded("previous")) return;
     const { position } = get();
     if (position > 0) set({ position: position - 1, isPlaying: true });
   },
 
   toggleShuffle: () => {
+    if (forwarded("toggleShuffle")) return;
     const { shuffle, queue, order, position } = get();
     if (queue.length === 0) {
       set({ shuffle: !shuffle });
@@ -127,18 +168,56 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     }
   },
 
-  cycleRepeat: () =>
+  cycleRepeat: () => {
+    if (forwarded("cycleRepeat")) return;
     set((state) => ({
       repeat: state.repeat === "off" ? "all" : state.repeat === "all" ? "one" : "off",
-    })),
+    }));
+  },
 
-  setVolume: (volume) => set({ volume }),
+  setVolume: (volume) => {
+    if (forwarded("setVolume", volume)) return;
+    set({ volume });
+  },
 
-  setPlaybackRate: (playbackRate) => set({ playbackRate }),
+  setPlaybackRate: (playbackRate) => {
+    if (forwarded("setPlaybackRate", playbackRate)) return;
+    set({ playbackRate });
+  },
 
-  setSleepEndsAt: (sleepEndsAt) => set({ sleepEndsAt, stopAfterTrack: false }),
+  setSleepEndsAt: (sleepEndsAt) => {
+    if (forwarded("setSleepEndsAt", sleepEndsAt)) return;
+    set({ sleepEndsAt, stopAfterTrack: false });
+  },
 
-  setStopAfterTrack: (stopAfterTrack) => set({ stopAfterTrack, sleepEndsAt: null }),
+  setStopAfterTrack: (stopAfterTrack) => {
+    if (forwarded("setStopAfterTrack", stopAfterTrack)) return;
+    set({ stopAfterTrack, sleepEndsAt: null });
+  },
+
+  setSyncRole: (syncRole) => set({ syncRole }),
+
+  applyRemoteState: (state) =>
+    set({
+      queue: state.tracks,
+      order: state.tracks.map((_, index) => index),
+      position: state.position,
+      isPlaying: state.isPlaying,
+      repeat: state.repeat,
+      volume: state.volume,
+      playbackRate: state.playbackRate,
+      lastKnownTime: state.currentTime,
+    }),
+
+  takeOver: () => {
+    const state = get();
+    if (state.syncRole !== "remote") return;
+    set({
+      syncRole: "standalone",
+      pendingSeekSeconds: state.lastKnownTime,
+      isPlaying: true,
+    });
+  },
 
   toggleQueueOpen: () => set((state) => ({ queueOpen: !state.queueOpen })),
 
@@ -159,12 +238,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   jumpTo: (orderIndex) => {
+    if (forwarded("jumpTo", orderIndex)) return;
     if (orderIndex >= 0 && orderIndex < get().order.length) {
       set({ position: orderIndex, isPlaying: true });
     }
   },
 
   removeAt: (orderIndex) => {
+    if (forwarded("removeAt", orderIndex)) return;
     const { queue, order, position } = get();
     const tracks = order.map((index) => queue[index]);
     if (orderIndex < 0 || orderIndex >= tracks.length) return;
@@ -180,6 +261,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   moveTo: (fromIndex, toIndex) => {
+    if (forwarded("moveTo", fromIndex, toIndex)) return;
     const { queue, order, position } = get();
     const tracks = order.map((index) => queue[index]);
     if (fromIndex === toIndex || fromIndex < 0 || fromIndex >= tracks.length) return;
@@ -193,6 +275,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   enqueueNext: (newTracks) => {
+    if (forwarded("enqueueNext", newTracks)) return;
     const { queue, order, position, playQueue } = get();
     if (queue.length === 0 || position < 0) {
       playQueue(newTracks);
@@ -204,6 +287,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   enqueueEnd: (newTracks) => {
+    if (forwarded("enqueueEnd", newTracks)) return;
     const { queue, order, position, playQueue } = get();
     if (queue.length === 0 || position < 0) {
       playQueue(newTracks);
@@ -212,7 +296,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const tracks = [...order.map((index) => queue[index]), ...newTracks];
     set({ queue: tracks, order: tracks.map((_, index) => index), position });
   },
-}));
+  };
+});
 
 export function selectCurrentTrack(state: PlayerState): Track | null {
   if (state.position < 0) return null;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Track } from "../../api/types";
 import { recordPlay } from "../../api/userLibrary";
+import { sendCommand } from "../../lib/syncBus";
 import { useAuthStore } from "../../stores/authStore";
 import { EQ_FREQUENCIES, useEqStore } from "../../stores/eqStore";
 import { selectCurrentTrack, usePlayerStore } from "../../stores/playerStore";
@@ -25,6 +26,10 @@ export function usePlayerAudio() {
   const volume = usePlayerStore((state) => state.volume);
   const playbackRate = usePlayerStore((state) => state.playbackRate);
   const sleepEndsAt = usePlayerStore((state) => state.sleepEndsAt);
+  const syncRole = usePlayerStore((state) => state.syncRole);
+  const isRemote = syncRole === "remote";
+  const lastKnownTime = usePlayerStore((state) => state.lastKnownTime);
+  const remoteSeekRequest = usePlayerStore((state) => state.remoteSeekRequest);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const lastRecordedRef = useRef<Track | null>(null);
@@ -66,15 +71,33 @@ export function usePlayerAudio() {
     };
   }, [audio]);
 
-  // Record listening history once per playback start
+  // Record listening history once per playback start (leader only)
   useEffect(() => {
-    if (!currentTrack || lastRecordedRef.current === currentTrack) return;
+    if (isRemote || !currentTrack || lastRecordedRef.current === currentTrack) return;
     lastRecordedRef.current = currentTrack;
     void recordPlay(currentTrack.id).catch(() => {});
-  }, [currentTrack]);
+  }, [currentTrack, isRemote]);
+
+  // Remote tabs mirror state but never touch the audio element
+  useEffect(() => {
+    if (isRemote) {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+    }
+  }, [audio, isRemote]);
+
+  // Seek requested from a remote tab (leader executes it)
+  useEffect(() => {
+    if (isRemote || remoteSeekRequest === null) return;
+    audio.currentTime = remoteSeekRequest;
+    setCurrentTime(remoteSeekRequest);
+    usePlayerStore.setState({ remoteSeekRequest: null });
+  }, [audio, isRemote, remoteSeekRequest]);
 
   // Switch source when the current track changes
   useEffect(() => {
+    if (isRemote) return;
     if (!currentTrack) {
       audio.removeAttribute("src");
       audio.load();
@@ -88,11 +111,11 @@ export function usePlayerAudio() {
     if (usePlayerStore.getState().isPlaying) {
       void audio.play().catch(() => usePlayerStore.getState().setPlaying(false));
     }
-  }, [audio, currentTrack]);
+  }, [audio, currentTrack, isRemote]);
 
   // Sync play/pause intent
   useEffect(() => {
-    if (!currentTrack) return;
+    if (isRemote || !currentTrack) return;
     if (isPlaying) {
       // Browsers keep the AudioContext suspended until a user gesture
       void audioContextRef.current?.resume().catch(() => {});
@@ -100,7 +123,7 @@ export function usePlayerAudio() {
     } else {
       audio.pause();
     }
-  }, [audio, isPlaying, currentTrack]);
+  }, [audio, isPlaying, currentTrack, isRemote]);
 
   useEffect(() => {
     audio.volume = volume;
@@ -164,9 +187,9 @@ export function usePlayerAudio() {
     };
   }, [audio]);
 
-  // OS media controls (hardware keys, lock screen)
+  // OS media controls (hardware keys, lock screen) — leader tab only
   useEffect(() => {
-    if (!("mediaSession" in navigator)) return;
+    if (isRemote || !("mediaSession" in navigator)) return;
     const session = navigator.mediaSession;
     if (currentTrack) {
       session.metadata = new MediaMetadata({
@@ -180,21 +203,31 @@ export function usePlayerAudio() {
     session.setActionHandler("pause", () => usePlayerStore.getState().setPlaying(false));
     session.setActionHandler("previoustrack", () => usePlayerStore.getState().previous());
     session.setActionHandler("nexttrack", () => usePlayerStore.getState().next());
-  }, [currentTrack]);
+  }, [currentTrack, isRemote]);
 
   const seek = (time: number) => {
+    if (isRemote) {
+      sendCommand("seek", time);
+      return;
+    }
     audio.currentTime = time;
     setCurrentTime(time);
   };
 
   /** Restart the track when it is past 3 seconds, otherwise go to the previous one. */
   const restartOrPrevious = () => {
-    if (audio.currentTime > 3) {
+    const effective = isRemote ? lastKnownTime : audio.currentTime;
+    if (effective > 3) {
       seek(0);
     } else {
       usePlayerStore.getState().previous();
     }
   };
 
-  return { currentTime, duration, seek, restartOrPrevious };
+  return {
+    currentTime: isRemote ? lastKnownTime : currentTime,
+    duration: isRemote ? (currentTrack?.duration ?? 0) : duration,
+    seek,
+    restartOrPrevious,
+  };
 }

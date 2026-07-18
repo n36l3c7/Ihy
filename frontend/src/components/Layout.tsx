@@ -23,6 +23,7 @@ import type { Playlist } from "../api/types";
 import { createPlaylist, deletePlaylist, getPlaylist, getPlaylists } from "../api/userLibrary";
 import { PlayerBar } from "../features/player/PlayerBar";
 import { QueuePanel } from "../features/player/QueuePanel";
+import { initPlayerSync } from "../lib/playerSync";
 import { initSessionPersistence, restoreSession } from "../lib/session";
 import { useAuthStore } from "../stores/authStore";
 import { usePlayerStore } from "../stores/playerStore";
@@ -60,10 +61,13 @@ export function Layout() {
 
   const playlists = useQuery({ queryKey: ["playlists"], queryFn: getPlaylists });
 
-  // Resume the last playback session (paused, at the saved position)
+  // Cross-tab sync first, then resume the last session unless another
+  // tab is already playing (its state arrives within the handshake delay)
   useEffect(() => {
+    initPlayerSync();
     initSessionPersistence();
-    void restoreSession();
+    const timer = setTimeout(() => void restoreSession(), 800);
+    return () => clearTimeout(timer);
   }, []);
 
   const createMutation = useMutation({
