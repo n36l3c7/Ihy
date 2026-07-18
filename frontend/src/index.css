@@ -59,6 +59,23 @@
     drop-shadow(0 0 6px rgba(0, 229, 199, 0.6));
 }
 
+/* Glitch: white accent on pure black, VHS chromatic fringing on the mark */
+:root[data-theme="glitch"] {
+  --color-emerald-400: #ffffff;
+  --color-emerald-500: #fafafa;
+  --color-emerald-600: #d4d4d8;
+  --color-zinc-950: #000000;
+  --color-zinc-900: #0a0a0c;
+  --color-zinc-800: #161619;
+  --color-zinc-700: #232327;
+}
+
+:root[data-theme="glitch"] .app-logo {
+  filter: drop-shadow(2px 0 0 rgba(255, 61, 129, 0.7))
+    drop-shadow(-2px 0 0 rgba(0, 229, 255, 0.7))
+    drop-shadow(0 0 5px rgba(255, 255, 255, 0.35));
+}
+
 html,
 body,
 #root {
