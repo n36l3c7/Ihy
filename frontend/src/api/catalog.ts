@@ -16,7 +16,8 @@ export interface TrackFilters {
   album_id?: number;
   genre_id?: number;
   ids?: string;
-  sort?: "title" | "recent";
+  sort?: "title" | "recent" | "random";
+  never_played?: boolean;
   limit?: number;
   offset?: number;
 }

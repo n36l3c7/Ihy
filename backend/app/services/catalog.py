@@ -3,9 +3,10 @@ from typing import Literal
 from sqlalchemy import Select, distinct, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.models.interactions import PlayHistory
 from app.models.library import Album, Artist, Genre, Track, track_artists, track_genres
 
-TrackSort = Literal["title", "recent"]
+TrackSort = Literal["title", "recent", "random"]
 
 
 def _apply_track_filters(
@@ -44,12 +45,23 @@ def list_tracks(
     sort: TrackSort = "title",
     limit: int = 50,
     offset: int = 0,
+    never_played_for_user: int | None = None,
 ) -> tuple[list[Track], int]:
     base = _apply_track_filters(select(Track), q, artist_id, album_id, genre_id)
     if ids is not None:
         base = base.where(Track.id.in_(ids))
+    if never_played_for_user is not None:
+        played = select(PlayHistory.track_id).where(
+            PlayHistory.user_id == never_played_for_user
+        )
+        base = base.where(Track.id.notin_(played))
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
-    order = Track.created_at.desc() if sort == "recent" else Track.title
+    if sort == "random":
+        order = func.random()
+    elif sort == "recent":
+        order = Track.created_at.desc()
+    else:
+        order = Track.title
     stmt = (
         base.options(
             selectinload(Track.artists),

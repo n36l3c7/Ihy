@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bookmark,
   ChartColumn,
+  CircleDashed,
   Disc3,
   Folder,
   HardDriveDownload,
@@ -31,6 +32,7 @@ const SECTIONS: { to: string; label: string; icon: typeof Music2 }[] = [
   { to: "/folders", label: "Folders", icon: Folder },
   { to: "/favorites", label: "Liked songs", icon: Heart },
   { to: "/history", label: "Recently played", icon: History },
+  { to: "/never-played", label: "Never played", icon: CircleDashed },
   { to: "/bookmarks", label: "Bookmarks", icon: Bookmark },
   { to: "/downloads", label: "Downloads", icon: HardDriveDownload },
   { to: "/stats", label: "Statistics", icon: ChartColumn },

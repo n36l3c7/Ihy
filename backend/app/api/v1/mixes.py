@@ -18,3 +18,9 @@ class DailyMixRead(BaseModel):
 def get_daily_mixes(db: DbDep, user: CurrentUserDep) -> list[dict]:
     """Genre-based mixes regenerated every day, stable within the day."""
     return daily_mixes.get_daily_mixes(db, user)
+
+
+@router.get("/recommended", response_model=list[TrackRead])
+def get_recommended(db: DbDep, user: CurrentUserDep) -> list:
+    """Tracks picked from the user's favorite genres, reshuffled each call."""
+    return daily_mixes.get_recommended_tracks(db, user)

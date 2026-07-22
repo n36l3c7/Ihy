@@ -8,3 +8,5 @@ export interface DailyMix {
 }
 
 export const getDailyMixes = () => api<DailyMix[]>("/mixes/daily");
+
+export const getRecommendedTracks = () => api<Track[]>("/mixes/recommended");

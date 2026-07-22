@@ -17,6 +17,7 @@ from app.models.user import User
 
 MIX_COUNT = 3
 MIX_SIZE = 25
+RECOMMENDED_SIZE = 20
 
 
 def _top_genres(db: Session, user: User, limit: int) -> list[Genre]:
@@ -87,3 +88,42 @@ def get_daily_mixes(
             }
         )
     return mixes
+
+
+def get_recommended_tracks(
+    db: Session, user: User, *, limit: int = RECOMMENDED_SIZE
+) -> list[Track]:
+    """Randomized picks from the user's favorite genres, biased toward
+    tracks not yet played. Unlike the daily mixes this reshuffles on every
+    call, so "Explore" feels alive rather than stuck for the whole day."""
+    genres = _top_genres(db, user, 6)
+    played_ids = set(
+        db.scalars(select(PlayHistory.track_id).where(PlayHistory.user_id == user.id))
+    )
+    track_options = (
+        selectinload(Track.artists),
+        selectinload(Track.album),
+        selectinload(Track.genres),
+    )
+    if not genres:
+        return list(
+            db.scalars(
+                select(Track).options(*track_options).order_by(func.random()).limit(limit)
+            )
+        )
+    genre_ids = [genre.id for genre in genres]
+    all_tracks = list(
+        db.scalars(
+            select(Track)
+            .where(Track.genres.any(Genre.id.in_(genre_ids)))
+            .options(*track_options)
+        )
+    )
+    fresh = [track for track in all_tracks if track.id not in played_ids]
+    random.shuffle(fresh)
+    picked = fresh[:limit]
+    if len(picked) < limit:
+        remaining = [track for track in all_tracks if track not in picked]
+        random.shuffle(remaining)
+        picked += remaining[: limit - len(picked)]
+    return picked[:limit]

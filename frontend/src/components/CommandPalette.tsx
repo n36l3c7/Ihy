@@ -34,6 +34,7 @@ const PAGES: { label: string; to: string }[] = [
   { label: "Wrapped", to: "/wrapped" },
   { label: "Liked songs", to: "/favorites" },
   { label: "Recently played", to: "/history" },
+  { label: "Never played", to: "/never-played" },
   { label: "Bookmarks", to: "/bookmarks" },
   { label: "Statistics", to: "/stats" },
   { label: "Settings", to: "/settings" },

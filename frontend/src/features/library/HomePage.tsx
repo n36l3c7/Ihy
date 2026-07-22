@@ -7,9 +7,7 @@ import { getQueues } from "../../api/queues";
 import type { Track } from "../../api/types";
 import { getHistory } from "../../api/userLibrary";
 import { AlbumCard, CardShelf } from "../../components/AlbumCard";
-import { CardPlayButton } from "../../components/CardPlayButton";
-import { CoverImage } from "../../components/CoverImage";
-import { artistNames } from "../../lib/format";
+import { TrackCard } from "../../components/TrackCard";
 import { useAuthStore } from "../../stores/authStore";
 import { usePlayerStore } from "../../stores/playerStore";
 import { loadSavedQueue } from "../player/queueActions";
@@ -123,19 +121,7 @@ export function HomePage() {
           <h2 className="mb-4 text-lg font-semibold">Recently played</h2>
           <CardShelf>
             {recentTracks.map((track, index) => (
-              <button
-                key={track.id}
-                type="button"
-                onClick={() => playQueue(recentTracks, index)}
-                className="group w-40 shrink-0 rounded-lg p-3 text-left transition-colors hover:bg-zinc-900"
-              >
-                <div className="relative">
-                  <CoverImage albumId={track.album?.id} className="aspect-square w-full rounded-md" />
-                  <CardPlayButton onPlay={() => playQueue(recentTracks, index)} />
-                </div>
-                <p className="mt-2 truncate text-sm font-medium text-zinc-100">{track.title}</p>
-                <p className="truncate text-xs text-zinc-500">{artistNames(track.artists)}</p>
-              </button>
+              <TrackCard key={track.id} track={track} tracks={recentTracks} index={index} />
             ))}
           </CardShelf>
         </section>

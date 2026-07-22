@@ -29,13 +29,14 @@ MEDIA_TYPES = {
 @router.get("", response_model=Page[TrackRead])
 def list_tracks(
     db: DbDep,
-    _user: CurrentUserDep,
+    user: CurrentUserDep,
     q: Annotated[str | None, Query(max_length=200)] = None,
     artist_id: int | None = None,
     album_id: int | None = None,
     genre_id: int | None = None,
     ids: Annotated[str | None, Query(max_length=10000)] = None,
     sort: TrackSort = "title",
+    never_played: bool = False,
     limit: Annotated[int, Query(ge=1, le=1000)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
@@ -57,6 +58,7 @@ def list_tracks(
         sort=sort,
         limit=limit,
         offset=offset,
+        never_played_for_user=user.id if never_played else None,
     )
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
